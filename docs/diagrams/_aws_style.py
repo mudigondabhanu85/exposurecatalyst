@@ -11,12 +11,29 @@ from __future__ import annotations
 
 import base64
 import html
+import os
 import re
 from pathlib import Path
 from xml.sax.saxutils import escape
 
-FONT = "Helvetica"
+FONT = "Helvetica"          # AWS-style node/edge labels (unchanged)
 AWS_INK = "#232F3E"
+
+# ---- Brand (title block + legend only; AWS icons and colors stay as AWS defines them) -------------
+BRAND_NAVY, BRAND_ORANGE, BRAND_SLATE, BRAND_BORDER = "#0B1B33", "#E8541A", "#4A5568", "#D5DBE4"
+BRAND_HEADING_FONT, BRAND_BODY_FONT = "Space Grotesk", "Inter"
+BRAND_DIR = Path(os.environ.get("EXCAT_BRAND_DIR", Path(__file__).resolve().parents[2] / "brand"))
+BRAND_MARK_PNG = BRAND_DIR / "assets" / "png" / "mark-light-512.png"  # shown at 64 px (brand minimum)
+
+
+def title_block(title: str, subtitle: str) -> str:
+    """Brand title block: mark (64 px) + title in Space Grotesk navy + subtitle, orange rule."""
+    return (f'<<table border="0" cellborder="0" cellspacing="0" cellpadding="6"><tr>'
+            f'<td fixedsize="true" width="64" height="64"><img src="{BRAND_MARK_PNG}" scale="true"/></td>'
+            f'<td align="left" balign="left"><font face="{BRAND_HEADING_FONT}" point-size="26" color="{BRAND_NAVY}">'
+            f'<b>{html.escape(title)}</b></font><br/><font face="{BRAND_BODY_FONT}" point-size="13" '
+            f'color="{BRAND_SLATE}">{html.escape(subtitle)}</font></td></tr>'
+            f'<tr><td colspan="2" height="4" bgcolor="{BRAND_ORANGE}"></td></tr></table>>')
 
 # ---- Graphviz ("diagrams") styles -----------------------------------------------------------------
 
@@ -68,7 +85,7 @@ GROUP = {
     "security": _g("#DD344C", fill="#FFFFFF", style="rounded,dashed", pen="1.5"),
     "external": _g("#545B64", fill="#F4F4F4", style="rounded", pen="1.5"),
     "trust": _g("#D13212", fill="#FFFFFF", style="dashed", pen="2.5"),
-    "legend": _g("#7D8998", fill="#FFFFFF", style="rounded", pen="1"),
+    "legend": {**_g(BRAND_BORDER, fill="#FFFFFF", style="rounded", pen="1.5"), "fontname": BRAND_BODY_FONT},
 }
 
 _E = {"fontname": FONT, "fontsize": "10", "fontcolor": AWS_INK, "arrowsize": "0.8", "penwidth": "1.4"}
@@ -105,9 +122,11 @@ def legend_html() -> str:
     ]
     cells = "".join(
         f'<tr><td><font color="{c}">{"━━━▶" if s == "solid" else ("╍╍╍▶" if s == "dashed" else "┈┈┈▶")}</font></td>'
-        f'<td align="left">{html.escape(t)}</td></tr>' for c, s, t in rows)
-    return (f'<<table border="0" cellborder="0" cellpadding="3"><tr><td colspan="2" align="left"><b>Legend</b></td></tr>'
-            f'{cells}<tr><td colspan="2" align="left"><font point-size="10">Numbered badges = flows described in the architecture walkthrough</font></td></tr></table>>')
+        f'<td align="left"><font face="{BRAND_BODY_FONT}" color="{BRAND_NAVY}">{html.escape(t)}</font></td></tr>'
+        for c, s, t in rows)
+    return (f'<<table border="0" cellborder="0" cellpadding="3"><tr><td colspan="2" align="left">'
+            f'<font face="{BRAND_HEADING_FONT}" point-size="14" color="{BRAND_NAVY}"><b>Legend</b></font></td></tr>'
+            f'{cells}<tr><td colspan="2" align="left"><font face="{BRAND_BODY_FONT}" point-size="10" color="{BRAND_SLATE}">Numbered badges = flows described in the architecture walkthrough</font></td></tr></table>>')
 
 
 def embed_svg_images(svg_path: Path) -> None:
@@ -138,7 +157,7 @@ _DRAWIO_GROUP = {
     "layer": "rounded=1;arcSize=3;strokeColor=#7D8998;fillColor=#FAFAFA;fontColor=#232F3E;dashed=0;",
     "security": "rounded=1;arcSize=3;strokeColor=#DD344C;fillColor=none;fontColor=#DD344C;dashed=1;",
     "external": "rounded=1;arcSize=3;strokeColor=#545B64;fillColor=#F4F4F4;fontColor=#232F3E;dashed=0;",
-    "legend": "rounded=1;arcSize=3;strokeColor=#7D8998;fillColor=#FFFFFF;fontColor=#232F3E;align=left;spacingLeft=10;",
+    "legend": "rounded=1;arcSize=3;strokeColor=#D5DBE4;fillColor=#FFFFFF;fontColor=#0B1B33;fontFamily=Space Grotesk;align=left;spacingLeft=10;",
 }
 _GROUP_COMMON = "points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=13;fontStyle=1;container=0;verticalAlign=top;align=left;spacingLeft=30;"
 _ICON = ("sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=#ffffff;dashed=0;"
@@ -158,6 +177,7 @@ class Drawio:
         self.name, self.width, self.height = name, width, height
         self.cells: list[str] = []
         self._n = 0
+        self.dy = 0  # vertical offset for content placed after the title block
 
     def _id(self, prefix: str) -> str:
         self._n += 1
@@ -168,7 +188,7 @@ class Drawio:
         value = f"{escape(title)}" + (f"<br><span style='font-weight:normal;font-size:11px'>{escape(subtitle)}</span>" if subtitle else "")
         style = _DRAWIO_GROUP[kind] + _GROUP_COMMON + ("spacingLeft=10;" if kind in ("layer", "security", "external", "legend") else "")
         self.cells.append(f'<mxCell id="{cid}" value="{escape(value, {chr(34): "&quot;"})}" style="{style}" vertex="1" parent="1">'
-                          f'<mxGeometry x="{x}" y="{y}" width="{w}" height="{h}" as="geometry"/></mxCell>')
+                          f'<mxGeometry x="{x}" y="{y + self.dy}" width="{w}" height="{h}" as="geometry"/></mxCell>')
         return cid
 
     def icon(self, role: str, service: str, shape: str, fill: str, x: int, y: int, size: int = 56,
@@ -179,22 +199,46 @@ class Drawio:
                        if resource else f"shape=mxgraph.aws4.{shape};fillColor={fill};strokeColor=none;")
         value = f"<b>{escape(role)}</b>" + (f"<br>{escape(service)}" if service else "")
         self.cells.append(f'<mxCell id="{cid}" value="{escape(value, {chr(34): "&quot;"})}" style="{_ICON}{shape_style}" vertex="1" parent="1">'
+                          f'<mxGeometry x="{x}" y="{y + self.dy}" width="{size}" height="{size}" as="geometry"/></mxCell>')
+        return cid
+
+    def image(self, png: Path, x: int, y: int, size: int) -> str:
+        """Embedded PNG (draw.io stores images as data URIs without ';base64')."""
+        cid = self._id("i")
+        data = base64.b64encode(png.read_bytes()).decode()
+        style = f"shape=image;aspect=fixed;imageAspect=0;verticalLabelPosition=bottom;image=data:image/png,{data};"
+        self.cells.append(f'<mxCell id="{cid}" value="" style="{style}" vertex="1" parent="1">'
                           f'<mxGeometry x="{x}" y="{y}" width="{size}" height="{size}" as="geometry"/></mxCell>')
         return cid
+
+    def title(self, title: str, subtitle: str, x: int = 20, y: int = 10) -> None:
+        """Brand title block: mark (64 px), Space Grotesk navy title, Inter subtitle, orange rule."""
+        self.image(BRAND_MARK_PNG, x, y, 64)
+        style = (f"text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontFamily={BRAND_HEADING_FONT};"
+                 f"fontSize=24;fontStyle=1;fontColor={BRAND_NAVY};")
+        value = escape(f"{title}<br><span style='font-family:{BRAND_BODY_FONT};font-size:13px;font-weight:normal;"
+                       f"color:{BRAND_SLATE}'>{subtitle}</span>", {chr(34): "&quot;"})
+        cid = self._id("t")
+        self.cells.append(f'<mxCell id="{cid}" value="{value}" style="{style}" vertex="1" parent="1">'
+                          f'<mxGeometry x="{x + 76}" y="{y + 4}" width="1500" height="60" as="geometry"/></mxCell>')
+        rid = self._id("r")
+        self.cells.append(f'<mxCell id="{rid}" value="" style="rounded=0;strokeColor=none;fillColor={BRAND_ORANGE};" '
+                          f'vertex="1" parent="1"><mxGeometry x="{x}" y="{y + 70}" width="1576" height="4" as="geometry"/></mxCell>')
 
     def box(self, role: str, detail: str, x: int, y: int, w: int = 200, h: int = 56) -> str:
         cid = self._id("b")
         value = f"<b>{escape(role)}</b><br><span style='font-size:10px'>{escape(detail)}</span>"
         style = "rounded=1;whiteSpace=wrap;html=1;strokeColor=#545B64;fillColor=#FFFFFF;fontColor=#232F3E;fontSize=11;"
         self.cells.append(f'<mxCell id="{cid}" value="{escape(value, {chr(34): "&quot;"})}" style="{style}" vertex="1" parent="1">'
-                          f'<mxGeometry x="{x}" y="{y}" width="{w}" height="{h}" as="geometry"/></mxCell>')
+                          f'<mxGeometry x="{x}" y="{y + self.dy}" width="{w}" height="{h}" as="geometry"/></mxCell>')
         return cid
 
-    def text(self, value: str, x: int, y: int, w: int, h: int) -> str:
+    def text(self, value: str, x: int, y: int, w: int, h: int, font: str | None = None) -> str:
         cid = self._id("t")
-        style = "text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fontColor=#232F3E;"
+        style = "text;html=1;align=left;verticalAlign=top;whiteSpace=wrap;fontSize=11;fontColor=#232F3E;" + (
+            f"fontFamily={font};" if font else "")
         self.cells.append(f'<mxCell id="{cid}" value="{escape(value, {chr(34): "&quot;"})}" style="{style}" vertex="1" parent="1">'
-                          f'<mxGeometry x="{x}" y="{y}" width="{w}" height="{h}" as="geometry"/></mxCell>')
+                          f'<mxGeometry x="{x}" y="{y + self.dy}" width="{w}" height="{h}" as="geometry"/></mxCell>')
         return cid
 
     def edge(self, src: str, dst: str, text: str, kind: str = "sync", exit_: str = "", entry: str = "") -> str:

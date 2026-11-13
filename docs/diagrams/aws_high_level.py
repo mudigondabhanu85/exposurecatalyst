@@ -8,7 +8,20 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from _aws_style import COLUMN, DIAGRAM_ATTRS, EDGE, GROUP, Drawio, cluster_label, edge_label, label, legend_html, node_attrs
+from _aws_style import (
+    BRAND_BODY_FONT,
+    COLUMN,
+    DIAGRAM_ATTRS,
+    EDGE,
+    GROUP,
+    Drawio,
+    cluster_label,
+    edge_label,
+    label,
+    legend_html,
+    node_attrs,
+    title_block,
+)
 from diagrams import Cluster, Diagram, Edge, Node
 from diagrams.aws.compute import ElasticContainerServiceService, Fargate
 from diagrams.aws.database import Aurora, ElasticacheForRedis
@@ -24,7 +37,8 @@ from diagrams.aws.storage import SimpleStorageServiceS3Bucket
 from diagrams.saas.identity import Okta
 
 NAME = "aws_high_level"
-TITLE = "ExposureCatalyst — AWS Reference Architecture (single region, Multi-AZ)"
+TITLE = "ExposureCatalyst — AWS Reference Architecture"
+SUBTITLE = "Production deployment · single region · Multi-AZ · v0.2"
 
 
 def e(kind: str, text: str, constraint: bool = True, minlen: int = 1) -> Edge:
@@ -40,7 +54,7 @@ INVIS = {"style": "invis"}
 
 
 def build(out_dir: Path, fmt: str, dpi: int) -> None:
-    attrs = {**DIAGRAM_ATTRS, "dpi": str(dpi)}
+    attrs = {**DIAGRAM_ATTRS, "dpi": str(dpi), "label": title_block(TITLE, SUBTITLE)}
     with Diagram(TITLE, filename=str(out_dir / NAME), outformat=fmt, show=False, direction="LR",
                  graph_attr=attrs, node_attr={"fontname": "Helvetica"}):
         # ---- External: left side (inbound) -------------------------------------------------
@@ -149,8 +163,9 @@ def build(out_dir: Path, fmt: str, dpi: int) -> None:
 
 
 def drawio(path: Path) -> None:
-    d = Drawio(NAME, 2440, 1560)
-    d.text(f"<b style='font-size:20px'>{TITLE}</b>", 20, 10, 1400, 34)
+    d = Drawio(NAME, 2440, 1600)
+    d.title(TITLE, SUBTITLE)
+    d.dy = 50
 
     # boundaries (drawn first so they sit behind icons)
     d.group("Users & Identity", "external", 20, 60, 300, 560, "Outside AWS")
@@ -217,7 +232,8 @@ def drawio(path: Path) -> None:
     d.text("<b>━━▶</b> synchronous (HTTPS / SQL-TLS)<br><span style='color:#E7157B'><b>╍╍▶</b></span> async message / event<br>"
            "<span style='color:#DD344C'><b>━━▶</b></span> egress via NAT + Network Firewall<br>"
            "<span style='color:#545B64'><b>━━▶</b></span> external system<br><span style='color:#7D8998'><b>┈┈▶</b></span> management / telemetry<br>"
-           "<br>①–⑮ numbered flows — see architecture walkthrough", 2105, 1100, 290, 220)
+           "<br>①–⑮ numbered flows — see architecture walkthrough", 2105, 1100, 290, 220,
+           font=BRAND_BODY_FONT)
 
     E = d.edge
     E(users, r53, "① DNS lookup")

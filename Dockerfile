@@ -25,6 +25,7 @@ WORKDIR /app
 COPY pyproject.toml README.md CHANGELOG.md mkdocs.yml ./
 COPY src ./src
 COPY docs ./docs
+COPY brand ./brand
 RUN pip install -e ".[docs]" && python -m exposurecatalyst.docs build --skip-diagrams
 
 # ---- 4. Runtime --------------------------------------------------------------------------------

@@ -1,0 +1,55 @@
+/* ExposureCatalyst brand theme for MkDocs Material — values from brand/tokens/tokens.css */
+@font-face { font-family: "Inter"; font-weight: 400; font-display: swap; src: url("../assets/fonts/inter-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 500; font-display: swap; src: url("../assets/fonts/inter-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Inter"; font-weight: 600; font-display: swap; src: url("../assets/fonts/inter-latin-600-normal.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-weight: 500; font-display: swap; src: url("../assets/fonts/space-grotesk-latin-500-normal.woff2") format("woff2"); }
+@font-face { font-family: "Space Grotesk"; font-weight: 700; font-display: swap; src: url("../assets/fonts/space-grotesk-latin-700-normal.woff2") format("woff2"); }
+
+:root {
+  --ec-navy: #0B1B33; --ec-orange: #E8541A; --ec-orange-bright: #FF7A3D; --ec-slate: #4A5568;
+  --ec-slate-light: #B8C2D3; --ec-surface: #F7F8FA; --ec-surface-alt: #EEF1F5; --ec-border: #D5DBE4;
+  --md-text-font: "Inter"; --md-code-font: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+/* Light scheme: white header so logo-light.svg (navy) is legible; navy tabs; orange accent rule. */
+[data-md-color-scheme="default"] {
+  --md-primary-fg-color: var(--ec-navy);
+  --md-primary-fg-color--light: #1d3357;
+  --md-primary-fg-color--dark: #06101f;
+  --md-accent-fg-color: var(--ec-orange);
+  --md-typeset-a-color: var(--ec-navy);
+  --md-default-bg-color: #ffffff;
+}
+[data-md-color-scheme="default"] .md-header { background: #ffffff; color: var(--ec-navy); border-bottom: 3px solid var(--ec-orange); box-shadow: none; }
+[data-md-color-scheme="default"] .md-header .md-search__input { background: var(--ec-surface-alt); color: var(--ec-navy); }
+[data-md-color-scheme="default"] .md-header .md-search__input::placeholder,
+[data-md-color-scheme="default"] .md-header .md-search__icon { color: var(--ec-slate); }
+[data-md-color-scheme="default"] .md-tabs { background: var(--ec-navy); color: #ffffff; }
+
+/* Dark scheme: navy surfaces, bright orange accent (#FF7A3D ≥ 4.5:1 on navy); dark wordmark in header. */
+[data-md-color-scheme="slate"] {
+  --md-primary-fg-color: var(--ec-navy);
+  --md-accent-fg-color: var(--ec-orange-bright);
+  --md-default-bg-color: #0e1f3a;
+  --md-typeset-a-color: var(--ec-orange-bright);
+}
+[data-md-color-scheme="slate"] .md-header { border-bottom: 3px solid var(--ec-orange-bright); }
+[data-md-color-scheme="slate"] .md-header__button.md-logo img { content: url("../assets/brand/logo-dark.svg"); }
+
+/* The full lockup needs room: brand minimum is 160 px wide. */
+.md-header__button.md-logo img { height: 2.4rem; width: auto; }
+.md-header__button.md-logo { padding: 0.2rem 0.4rem; }
+
+.md-typeset h1, .md-typeset h2, .md-typeset h3, .md-typeset h4, .md-header__title, .md-nav__title {
+  font-family: "Space Grotesk", "Inter", system-ui, sans-serif; font-weight: 700; color: inherit;
+}
+.md-typeset h1 { color: var(--md-typeset-color); }
+.md-typeset a { text-decoration: underline; text-decoration-color: var(--md-accent-fg-color); text-underline-offset: 2px; }
+.md-typeset a:hover { color: var(--md-accent-fg-color); }
+.md-typeset table:not([class]) th { background: var(--ec-navy); color: #ffffff; }
+[data-md-color-scheme="slate"] .md-typeset table:not([class]) th { background: #1d3357; }
+:focus-visible { outline: 2px solid var(--md-accent-fg-color); outline-offset: 2px; }
+
+.ec-swatch { display: inline-block; width: 1.1em; height: 1.1em; border-radius: 3px; border: 1px solid var(--ec-border); vertical-align: middle; margin-right: .4em; }
+.ec-logo-panel { padding: 1.2rem; border-radius: 10px; border: 1px solid var(--ec-border); margin: .5rem 0; }
+.ec-logo-panel--dark { background: var(--ec-navy); }
