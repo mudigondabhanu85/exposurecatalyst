@@ -39,6 +39,15 @@ Service accounts and API tokens for automation are planned for a later phase.
 | `GET /api/admin/rbac` · `GET/POST /api/admin/users` · `PUT /users/{id}/roles` · `PATCH /users/{id}` | `user:manage` | Users and role assignment |
 | `POST/PUT /api/admin/roles` | `role:manage` | Custom roles |
 | `GET /api/admin/audit` | `audit:view` | Audit log (keyset pagination via `before_id`) |
+| `GET/POST /api/advisories` · `GET/PATCH /api/advisories/{id}` | any advisory perm / `advisory:create` | List, create from CVE, read, edit draft |
+| `POST /api/advisories/{id}/submit` · `/approve` · `/reject` · `/cancel` | `advisory:create` / `advisory:approve` | Workflow (author cannot approve) |
+| `POST /api/advisories/{id}/send` `{confirm: true}` | `advisory:send` | SMTP delivery (approved only) |
+| `GET /api/advisories/{id}/export/{eml\|html\|pdf\|xlsx\|clipboard}` | `advisory:export` | Exports (approved or sent only) |
+| `GET /api/advisories/{id}/preview` · `/history` | any advisory perm | Sandboxed HTML preview, audit trail |
+| `POST/PUT/DELETE /api/advisories/{id}/assets…` · `POST …/assets/upload` · `PUT …/sources/{source}` | `advisory:create` | Manual assets, CSV/XLSX import, manual counts |
+| `GET/POST/DELETE /api/distribution-lists` | `advisory:create` | Saved recipient sets |
+| `GET /api/templates` · `POST /api/templates/{id}/versions` · `POST /api/template-versions/{id}/submit\|approve` | `template:manage` / `advisory:approve` | Versioned templates |
+| `GET/PUT /api/settings/smtp` · `POST /api/settings/smtp/test` | `settings:manage` | SMTP configuration (password never returned) |
 | `GET /metrics` | network-restricted | Prometheus metrics |
 
 ## Errors

@@ -13,7 +13,7 @@ stakeholder advisory emails.
 | Tab | What it does | Status |
 |---|---|---|
 | **CVE Intelligence** | Normalized, de-duplicated CVEs from NVD, CISA KEV and FIRST EPSS, with per-field provenance, search, filters, saved searches, a timeline and source health | **Phase 1 ✅** |
-| **Advisory Email Generator** | HTML advisories, an asset validation matrix, an Excel attachment, `.eml` / Copy for Outlook / SMTP delivery and an approval workflow | Phase 2 |
+| **Advisory Email Generator** | HTML advisories, an asset validation matrix, an Excel attachment, `.eml` / Copy for Outlook / SMTP delivery and an approval workflow | **Phase 2 ✅** |
 | **Integrations** | Plugin connectors for Qualys, Tanium, Wiz, Zafran, ArmorCode, ServiceNow CMDB and more | Phase 3 |
 | **Identity** | Okta SAML 2.0 / OIDC, SailPoint group → role mapping (SCIM 2.0), alerts and scheduling | Phase 4 |
 | **Security News & AI** | De-duplicated news feeds, a multi-provider AI layer with a redaction policy | Phase 5 |
@@ -23,10 +23,11 @@ stakeholder advisory emails.
 
 Delivery is phased. Each phase ships its own in-app help, documentation and diagrams.
 
-1. **Phase 1 (this release).** Scaffold, DB models and migrations, local auth with MFA and RBAC, CVE
+1. **Phase 1.** Scaffold, DB models and migrations, local auth with MFA and RBAC, CVE
    Intelligence (NVD + KEV + EPSS), the help framework (drawer, tooltips, Help Center), the MkDocs skeleton,
    the diagram pipeline and the [high-level AWS architecture](architecture/high-level.md).
-2. **Phase 2.** Advisory email generator, Excel export, `.eml` / Copy / SMTP delivery, manual entry.
+2. **Phase 2 (this release).** Advisory email generator, Excel export, `.eml` / Copy / SMTP delivery, manual
+   entry, versioned templates with approval, and brand identity applied across the app, emails and exports.
 3. **Phase 3.** Connector framework and the first six connectors, with an integration guide for each.
 4. **Phase 4.** Okta SAML and SP metadata, SailPoint mapping, alerts and scheduling, setup wizards, identity
    flow diagram.
@@ -36,8 +37,10 @@ Delivery is phased. Each phase ships its own in-app help, documentation and diag
 
 ## Where to start
 
-- **Analysts**: [CVE Intelligence user guide](user-guide/cve-intelligence.md)
+- **Analysts & approvers**: [CVE Intelligence](user-guide/cve-intelligence.md),
+  [Advisories](user-guide/advisories.md)
 - **Admins**: [Installation](getting-started/installation.md), [Users & RBAC](admin-guide/rbac.md),
+  [SMTP](admin-guide/smtp.md),
   [Ingestion sources](admin-guide/ingestion-sources.md)
 - **Security & architecture reviewers**: [AWS architecture](architecture/high-level.md),
   [Security overview](security/overview.md), [ADRs](architecture/adr/index.md)

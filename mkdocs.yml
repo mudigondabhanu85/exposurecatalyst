@@ -60,9 +60,11 @@ nav:
       - Installation & deployment: getting-started/installation.md
   - User guide:
       - CVE Intelligence: user-guide/cve-intelligence.md
+      - Advisories (analysts & approvers): user-guide/advisories.md
   - Admin guide:
       - Users & RBAC: admin-guide/rbac.md
       - CVE ingestion sources: admin-guide/ingestion-sources.md
+      - SMTP & email delivery: admin-guide/smtp.md
   - Architecture:
       - High-level AWS architecture: architecture/high-level.md
       - Diagram standards & pipeline: architecture/diagram-standards.md
@@ -87,6 +89,9 @@ nav:
       - help/cve-intelligence.md
       - help/cve-detail.md
       - help/advisories.md
+      - help/advisory-editor.md
+      - help/advisory-templates.md
+      - help/settings-smtp.md
       - help/news.md
       - help/settings-sources.md
       - help/settings-rbac.md

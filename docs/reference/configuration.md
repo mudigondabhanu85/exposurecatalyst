@@ -47,7 +47,15 @@ Every setting is an environment variable with the `EXCAT_` prefix (also read fro
 | `EXCAT_EGRESS_ALLOWLIST` | `str` | `services.nvd.nist.gov,www.cisa.gov,api.first.org,epss.empiricalsecurity.com` | Comma-separated hostnames the app may call. `*.example.com` matches subdomains. |
 | `EXCAT_SSRF_ALLOW_PRIVATE_NETWORKS` | `bool` | `False` | Allow outbound calls to private/loopback/link-local/metadata addresses. Keep false unless an on-prem integration requires it. |
 | `EXCAT_SSRF_RESOLVE_DNS` | `bool` | `True` | Resolve hostnames and block private results (DNS rebinding guard). |
+| `EXCAT_ADVISORY_SOURCES` | `str` | `Qualys,Tanium,Wiz,Zafran,ArmorCode,ServiceNow CMDB` | Rows shown in every advisory's asset validation matrix (comma-separated, in order). |
+| `EXCAT_UPLOAD_MAX_BYTES` | `int` | `5242880` | Maximum size of a CSV/XLSX asset upload (bytes). |
+| `EXCAT_UPLOAD_MAX_ROWS` | `int` | `10000` | Maximum rows imported from one asset upload. |
+| `EXCAT_SMTP_ALLOWED_PORTS` | `str` | `25,465,587,2525` | Ports an admin may configure for the SMTP relay. |
+| `EXCAT_SMTP_ALLOW_PRIVATE_HOSTS` | `bool` | `False` | Allow an SMTP relay on a private/internal address (common for corporate relays). Cloud metadata addresses are always blocked. |
+| `EXCAT_SMTP_ALLOW_PLAINTEXT` | `bool` | `False` | Allow SMTP without TLS. Development only (e.g. a local Mailpit); never in prod. |
+| `EXCAT_SMTP_TIMEOUT_SECONDS` | `float` | `30.0` | SMTP connect/send timeout. |
 | `EXCAT_FRONTEND_DIST_DIR` | `Path` | `frontend/dist` | Built React app served at /. |
 | `EXCAT_DOCS_SITE_DIR` | `Path` | `dist/docs/site` | Built MkDocs site served at /docs. |
 | `EXCAT_HELP_DIR` | `Path` | `docs/help` | In-app help Markdown (single source with docs). |
+| `EXCAT_BRAND_DIR` | `Path` | `brand` | Brand kit (logos, tokens) used in emails, exports and docs. |
 | `EXCAT_CHANGELOG_PATH` | `Path` | `CHANGELOG.md` | Changelog shown in Help Center → What's new. |

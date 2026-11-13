@@ -44,7 +44,7 @@ docs:            ## Diagrams + generated reference pages + MkDocs (strict) → d
 	$(PY) -m exposurecatalyst.docs build
 
 docker-build:    ## Build the container image
-	docker build -t exposurecatalyst:0.1.0 .
+	docker build -t exposurecatalyst:0.2.0 .
 
 up:              ## docker compose up (postgres, api, scheduler)
 	docker compose up -d --build

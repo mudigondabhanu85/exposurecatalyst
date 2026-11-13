@@ -3,6 +3,28 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-11-13 — Phase 2 + brand identity
+
+### Added
+- **Advisory Email Generator**: create from CVE with pre-filled details; unique `EXCAT-YYYY-NNNN` IDs;
+  editable subject and sections; To/CC/BCC with validation and distribution lists; draft → review →
+  approved → sent workflow with segregation of duties; full delivery and audit history.
+- Asset validation matrix (Validated = Yes only where assets were identified), cross-source de-duplication,
+  manual rows and counts labelled *Manual*, and CSV/XLSX upload.
+- Delivery: SMTP (STARTTLS/SSL, confirmation dialog), Copy for Outlook (rich HTML), `.eml` Outlook drafts
+  (`X-Unsent: 1`) with the Excel attachment, HTML and PDF.
+- Branded Excel export: logo, navy header rows, frozen headers, fitted columns, consolidated and per-source
+  sheets, formula-injection guard.
+- Versioned advisory templates (Critical, High, Informational, Executive) with sandboxed Jinja and approval.
+- Settings → SMTP with an encrypted password and a test email.
+- **Brand identity**: brand kit in `brand/`; tokens and self-hosted Inter / Space Grotesk; navy top bar
+  with wordmark; branded login, loading and error screens; favicons, PWA manifest and Open Graph image;
+  branded Swagger/ReDoc; email header logo (CID or data URI); branded docs theme and diagram title blocks.
+
+### Changed
+- Severity badges moved to a dedicated palette distinct from brand orange (WCAG AA). Links are now navy with
+  an orange underline.
+
 ## [0.1.0] — 2026-11-13 — Phase 1
 
 ### Added

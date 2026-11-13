@@ -60,6 +60,22 @@ Every outbound request passes `validate_outbound_url`:
 
 In AWS, the Network Firewall domain allowlist enforces the same policy at the network layer.
 
+## Advisory and email controls (Phase 2)
+
+| Risk | Control |
+|---|---|
+| Server-side template injection by template authors | Template bodies and subjects render in Jinja's `ImmutableSandboxedEnvironment` with autoescape, and are test-rendered on save. The layout, header and footer are code-owned |
+| HTML injection from CVE or analyst text | Autoescaping everywhere. Line breaks become `<br />` only after escaping |
+| Unreviewed content leaving the platform | Send and every export require `approved`. Edits are only possible in `draft` |
+| Self-approval | The author can't approve (advisories and template versions), even with both roles |
+| Email header injection | CR/LF/control characters stripped from subject and display names. Addresses validated |
+| BCC disclosure | BCC only in the SMTP envelope. Present in the `.eml` draft so Outlook can send it |
+| SSRF via SMTP relay | Host resolved and checked (metadata always blocked, private ranges opt-in), port allowlist, TLS verification |
+| CSV/formula injection in Excel | Values starting with `= + - @` are prefixed and forced to text. Uploaded XLSX read with `data_only` and `defusedxml` |
+| Malicious uploads | `.csv`/`.xlsx` only, size and row limits, XLSX magic check |
+| Preview rendering | Served with its own CSP (`default-src 'none'; sandbox`), framed only by the app, and shown in a `sandbox` iframe |
+| PDF renderer fetching remote resources | `link_callback` blocks everything except embedded `data:` images |
+
 ## Secrets management
 
 - `EXCAT_ENCRYPTION_KEY` (Fernet) encrypts secrets stored in the DB. In AWS it's delivered from Secrets Manager

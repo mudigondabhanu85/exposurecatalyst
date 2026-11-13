@@ -16,6 +16,38 @@ erDiagram
     cves ||--o{ cve_products : affects
     cves ||--o{ cve_events : timeline
     source_state ||--o{ job_runs : "runs (by source)"
+    advisory_templates ||--o{ advisory_template_versions : versions
+    advisory_template_versions ||--o{ advisories : "rendered with"
+    advisories ||--o{ advisory_source_status : matrix
+    advisories ||--o{ advisory_assets : assets
+    advisories ||--o{ advisory_deliveries : "sends / exports"
+    users ||--o{ advisories : authors
+    advisories { int id PK
+      string advisory_id UK "EXCAT-YYYY-NNNN"
+      string cve_id
+      string status "draft|in_review|approved|sent|cancelled"
+      string subject
+      json to_addrs
+      int created_by FK
+      int approved_by FK }
+    advisory_template_versions { int id PK
+      int version
+      string status
+      text body_template "sandboxed Jinja" }
+    advisory_source_status { int id PK
+      string source
+      bool integrated
+      int manual_count }
+    advisory_assets { int id PK
+      string source
+      string hostname
+      string ip_address
+      string resource_id
+      bool is_manual }
+    advisory_deliveries { int id PK
+      string channel "smtp|eml|html|pdf|xlsx|clipboard"
+      json recipients
+      string message_id }
     users {
       int id PK
       string username UK
@@ -102,6 +134,14 @@ erDiagram
 | `source_state.meta` | JSON | KEV: `etag`, `catalog_version` | system |
 | `source_state.refresh_requested_at` | datetime | Pending **Refresh now** | user |
 | `user_sessions.token_hash` | string(64) | SHA-256 of the session cookie. The raw token is never stored | system |
+| `advisories.advisory_id` | string(20), unique | `EXCAT-YYYY-NNNN`, from `advisory_sequences` (row-locked per year) | system |
+| `advisories.status` | string | draft → in_review → approved → sent, or cancelled | workflow |
+| `advisories.to_addrs` / `cc_addrs` / `bcc_addrs` | JSON | Validated, lower-cased recipient lists (**Confidential**) | analyst |
+| `advisories.template_version_id` | FK | The exact template version used (kept even after newer approvals) | system |
+| `advisory_source_status.manual_count` | int, nullable | Analyst count. 0 = checked, none found; NULL = not recorded | analyst |
+| `advisory_assets.*` | | Hostname, IP, OS, cloud account, resource ID, owner, BU, environment, detection date, plugin/QID/ID, `is_manual` (**Confidential**) | analyst / connectors |
+| `advisory_deliveries` | | Channel, actor, time, recipients, Message-ID, status, error for every send and export | system |
+| `distribution_lists` | | Named reusable To/CC/BCC sets | analyst |
 | `audit_log.prev_hash` / `hash` | string(64) | Hash chain: `sha256(prev_hash + canonical_json(row))` | system |
 
 ## Retention (defaults; configurable in Phase 6)
