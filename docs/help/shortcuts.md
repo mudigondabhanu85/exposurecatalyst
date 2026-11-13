@@ -14,3 +14,4 @@ docs: help/shortcuts/
 | `g` then `c` | Go to CVE Intelligence |
 | `g` then `h` | Go to Help Center |
 | `Tab` / `Shift+Tab` | Move between controls. Every action is reachable by keyboard |
+| `←` / `→` | Previous / next step in the guided tour |

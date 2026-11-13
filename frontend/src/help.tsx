@@ -84,7 +84,7 @@ function HelpDrawer({ id, onClose }: { id: string; onClose: () => void }) {
 export function HelpButton({ id }: { id: string }) {
   const { openHelp } = useHelp();
   return (
-    <button type="button" onClick={() => openHelp(id)} aria-label="Open help for this page" title="Help (?)"
+    <button type="button" onClick={() => openHelp(id)} aria-label="Open help for this page" title="Help (?)" data-tour="help-button"
             className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-ec-navy bg-white font-heading text-sm font-bold text-ec-navy hover:bg-ec-navy hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-ec-orange">
       ?
     </button>

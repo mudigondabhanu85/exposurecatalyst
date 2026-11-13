@@ -21,7 +21,7 @@ function SourceStrip() {
   if (!q.data) return null;
   const pending = q.data.sources.some((s) => s.refresh_pending);
   return (
-    <section aria-label="Source health" className="card mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
+    <section aria-label="Source health" data-tour="source-strip" className="card mb-4 flex flex-wrap items-center gap-x-6 gap-y-2 py-3">
       <span className="label mb-0">Source health<InfoTip k="source_health" /></span>
       {q.data.sources.map((s) => (
         <span key={s.source} className="flex items-center gap-2 text-sm">
@@ -127,7 +127,7 @@ export default function CveListPage() {
       <form onSubmit={apply} key={params.toString()} className="card mb-4 grid grid-cols-2 gap-3 md:grid-cols-6" aria-label="CVE filters">
         <div className="col-span-2 md:col-span-3">
           <Field label="CVE ID or keyword" htmlFor="cve-search">
-            <input id="cve-search" name="q" className="input" defaultValue={query.q} placeholder="CVE-2024-21762 or 'fortios' — press / to focus" maxLength={200} />
+            <input id="cve-search" data-tour="cve-search" name="q" className="input" defaultValue={query.q} placeholder="CVE-2024-21762 or 'fortios' — press / to focus" maxLength={200} />
           </Field>
         </div>
         <Field label="Vendor" htmlFor="f-vendor" tip="cpe"><input id="f-vendor" name="vendor" className="input" defaultValue={query.vendor} maxLength={128} /></Field>

@@ -12,6 +12,7 @@ import HelpCenterPage from "./pages/HelpCenter";
 import NewsPage from "./pages/News";
 import AssistantPage from "./pages/Assistant";
 import { useAi } from "./components/Ai";
+import { useTour } from "./components/Tour";
 import AdvisoriesRoutes from "./pages/Advisories";
 import { LoadingScreen, NotFound } from "./components/StatusScreen";
 
@@ -64,6 +65,7 @@ const SETTINGS_PERMS = ["source:manage", "user:manage", "integration:manage", "s
 function Shell() {
   const { me, can } = useAuth();
   const aiOn = useAi();
+  const { start: startTour } = useTour();
   const qc = useQueryClient();
   useShortcuts();
   const logout = async () => {
@@ -82,14 +84,15 @@ function Shell() {
             <img src="/brand/svg/mark-simple-dark.svg" alt="ExposureCatalyst" height={32} className="h-8 w-8 sm:hidden" />
           </Link>
           <nav aria-label="Main" className="flex flex-wrap gap-1">
-            {can("cve:view") && <NavLink to="/cves" className={tab}>CVE Intelligence</NavLink>}
-            {["advisory:create", "advisory:approve", "advisory:send", "advisory:export", "template:manage"].some(can) && <NavLink to="/advisories" className={tab}>Advisories</NavLink>}
-            {can("news:view") && <NavLink to="/news" className={tab}>Security News</NavLink>}
-            {SETTINGS_PERMS.some(can) && <NavLink to="/settings" className={tab}>Settings</NavLink>}
+            {can("cve:view") && <NavLink to="/cves" className={tab} data-tour="nav-cves">CVE Intelligence</NavLink>}
+            {["advisory:create", "advisory:approve", "advisory:send", "advisory:export", "template:manage"].some(can) && <NavLink to="/advisories" className={tab} data-tour="nav-advisories">Advisories</NavLink>}
+            {can("news:view") && <NavLink to="/news" className={tab} data-tour="nav-news">Security News</NavLink>}
+            {SETTINGS_PERMS.some(can) && <NavLink to="/settings" className={tab} data-tour="nav-settings">Settings</NavLink>}
             {aiOn && <NavLink to="/assistant" className={tab}>Assistant</NavLink>}
-            <NavLink to="/help" className={tab}>Help Center</NavLink>
+            <NavLink to="/help" className={tab} data-tour="nav-help">Help Center</NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm text-ec-slate-light">
+            <button className="rounded-sm px-2 py-1 text-xs text-white underline decoration-ec-orange-bright hover:bg-white/10" onClick={startTour} title="Replay the guided tour">Tour</button>
             <span title={me?.roles.join(", ")}>{me?.display_name ?? me?.username}</span>
             <button className="rounded-sm border border-ec-slate-light/50 px-2 py-1 text-xs text-white hover:bg-white/10 focus-visible:outline-ec-orange-bright" onClick={logout}>Sign out</button>
           </div>
