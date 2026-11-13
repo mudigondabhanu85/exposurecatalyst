@@ -70,6 +70,7 @@ nav:
   - User guide:
       - CVE Intelligence: user-guide/cve-intelligence.md
       - Advisories (analysts & approvers): user-guide/advisories.md
+      - Security News: user-guide/news.md
   - Admin guide:
       - Users & RBAC: admin-guide/rbac.md
       - CVE ingestion sources: admin-guide/ingestion-sources.md
@@ -77,6 +78,7 @@ nav:
       - Okta SAML single sign-on: admin-guide/okta-saml.md
       - SailPoint provisioning & mapping: admin-guide/sailpoint.md
       - Alerts & scheduling: admin-guide/alerts.md
+      - AI providers & data protection: admin-guide/ai.md
   - Architecture:
       - High-level AWS architecture: architecture/high-level.md
       - Identity flow: architecture/identity-flow.md
@@ -117,6 +119,9 @@ nav:
       - help/settings-integrations.md
       - help/settings-sso.md
       - help/settings-alerts.md
+      - help/settings-news.md
+      - help/settings-ai.md
+      - help/assistant.md
       - help/news.md
       - help/settings-sources.md
       - help/settings-rbac.md

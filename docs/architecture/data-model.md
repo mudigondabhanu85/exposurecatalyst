@@ -39,6 +39,26 @@ erDiagram
     alert_events { int id PK
       string cve_id
       string status }
+    news_feeds ||--o{ news_items : publishes
+    ai_providers ||--o{ ai_usage : "metered by"
+    news_items { int id PK
+      string canonical_url UK
+      string title
+      string summary "≤300 chars excerpt"
+      json cve_ids
+      json tags
+      int cluster_id }
+    ai_providers { int id PK
+      string kind
+      string base_url
+      text secrets_enc "Fernet"
+      json config "api_version, region, prices" }
+    ai_usage { int id PK
+      string feature
+      int input_tokens
+      int output_tokens
+      float cost_usd
+      bool redacted }
     integrations ||--o{ integration_cve_checks : "checked CVEs"
     integrations ||--o{ asset_findings : "reports"
     integrations ||--o{ integration_vuln_map : "CVE → vendor IDs"
@@ -190,6 +210,10 @@ erDiagram
 | `scim_groups` / `scim_group_members` | | SCIM groups and memberships pushed by SailPoint | SCIM |
 | `alert_rules` | | Criteria, recipients, channels, encrypted webhooks, mode, throttle/digest, cursor | admin |
 | `alert_events` | | One per (rule, CVE): reason, matched/delivered time, status | system |
+| `news_feeds` | | Name, https URL, category, enabled, health, ETag | admin / curated defaults |
+| `news_items` | | Headline, link, canonical URL (unique), ≤300-char excerpt, date, CVE IDs, tags, cluster ID. Retained 90 days | feeds (public) |
+| `ai_providers` | | Provider kind, endpoint, models, temperature/max tokens, config (api_version, region, project, prices), encrypted secrets (**Restricted**) | admin |
+| `ai_usage` | | One row per AI call: user, feature, provider, model, tokens, cost, latency, redacted flag, status/error. **No prompt or response text** | system |
 | `distribution_lists` | | Named reusable To/CC/BCC sets | analyst |
 | `audit_log.prev_hash` / `hash` | string(64) | Hash chain: `sha256(prev_hash + canonical_json(row))` | system |
 

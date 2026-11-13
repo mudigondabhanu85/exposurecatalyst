@@ -4,6 +4,7 @@ import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tansta
 import { api, fmtDate, fmtDateTime, pct, type CvePage, type SavedSearch, type SourcesResp } from "../api";
 import { useAuth } from "../auth";
 import { InfoTip } from "../help";
+import { AiMeta, useAi } from "../components/Ai";
 import { EmptyState, ErrorNote, Field, HealthBadge, KevBadge, PageHeader, SeverityBadge } from "../components/ui";
 
 const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "UNKNOWN"];
@@ -47,7 +48,24 @@ function SourceStrip() {
   );
 }
 
+function NlSearch({ onApply }: { onApply: (filters: Record<string, unknown>) => void }) {
+  const [q, setQ] = useState("");
+  const m = useMutation({ mutationFn: (text: string) => api<{ filters: Record<string, unknown>; items: { cve_id: string }[]; provider: string; model: string; redacted_values: number; fallbacks: string[] }>("/api/ai/search", { method: "POST", body: { q: text } }),
+                          onSuccess: (r) => onApply(r.filters) });
+  return (
+    <form className="card mb-4 border-l-4 border-l-ec-orange" onSubmit={(e) => { e.preventDefault(); if (q.trim().length >= 3) m.mutate(q); }}>
+      <label className="label" htmlFor="nl">Ask in plain English <span className="rounded-sm bg-ec-navy px-1 text-[10px] text-white">AI</span></label>
+      <div className="flex gap-2"><input id="nl" className="input flex-1" value={q} onChange={(e) => setQ(e.target.value)} maxLength={300} placeholder="e.g. critical Fortinet CVEs exploited in the last 7 days" />
+        <button className="btn-primary" disabled={m.isPending}>{m.isPending ? "Thinking…" : "Search"}</button></div>
+      <ErrorNote error={m.error} />
+      {m.data && <p className="mt-1 text-xs text-ec-slate">Applied filters: <code>{JSON.stringify(m.data.filters)}</code> — edit them below.</p>}
+      {m.data && <AiMeta r={m.data} />}
+    </form>
+  );
+}
+
 export default function CveListPage() {
+  const aiOn = useAi();
   const [params, setParams] = useSearchParams();
   const qc = useQueryClient();
   const page = Number(params.get("page") ?? 1);
@@ -104,6 +122,7 @@ export default function CveListPage() {
     <>
       <PageHeader title="CVE Intelligence" helpId="cve-intelligence" subtitle="NVD · CISA KEV · FIRST EPSS — normalized and de-duplicated" />
       <SourceStrip />
+      {aiOn && <NlSearch onApply={(f) => { const n = new URLSearchParams(); for (const [k, v] of Object.entries(f)) Array.isArray(v) ? v.forEach((x) => n.append(k, String(x))) : n.set(k, String(v)); setParams(n); }} />}
 
       <form onSubmit={apply} key={params.toString()} className="card mb-4 grid grid-cols-2 gap-3 md:grid-cols-6" aria-label="CVE filters">
         <div className="col-span-2 md:col-span-3">

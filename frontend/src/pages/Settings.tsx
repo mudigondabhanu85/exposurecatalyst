@@ -8,6 +8,7 @@ import { Forbidden } from "../components/StatusScreen";
 import IntegrationsSettings from "./Integrations";
 import SsoSettings from "./Sso";
 import AlertsSettings from "./Alerts";
+import AiSettings from "./AiSettings";
 import { EmptyState, ErrorNote, HealthBadge, PageHeader } from "../components/ui";
 
 interface Role { id: number; name: string; description: string | null; is_system: boolean; permissions: string[]; user_count: number }
@@ -23,7 +24,8 @@ const SUBTABS: { to: string; label: string; perm: string; phase?: number }[] = [
   { to: "smtp", label: "SMTP", perm: "settings:manage" },
   { to: "sources", label: "CVE Sources", perm: "source:manage" },
   { to: "alerts", label: "Alerts & Scheduling", perm: "settings:manage" },
-  { to: "ai", label: "AI Providers", perm: "ai:manage", phase: 5 },
+  { to: "news", label: "News feeds", perm: "news:manage" },
+  { to: "ai", label: "AI Providers", perm: "ai:manage" },
 ];
 
 export default function SettingsPage() {
@@ -51,6 +53,8 @@ export default function SettingsPage() {
           <Route path="integrations" element={can("integration:manage") ? <IntegrationsSettings /> : <Forbidden />} />
           <Route path="sso" element={can("sso:manage") ? <SsoSettings /> : <Forbidden />} />
           <Route path="alerts" element={can("settings:manage") ? <AlertsSettings /> : <Forbidden />} />
+          <Route path="news" element={can("news:manage") ? <NewsFeedsSettings /> : <Forbidden />} />
+          <Route path="ai" element={can("ai:manage") ? <AiSettings /> : <Forbidden />} />
           {SUBTABS.filter((t) => t.phase).map((t) => (
             <Route key={t.to} path={t.to} element={can(t.perm) ? (
               <><PageHeader title={t.label} helpId="help-center" /><EmptyState title={`${t.label} arrives in Phase ${t.phase}`} why="This settings area is part of the delivery plan and will include a step-by-step setup wizard with Test validation at each step." /></>
@@ -291,5 +295,39 @@ function RoleEditor({ permissions, roles, onChange }: { permissions: { id: strin
         </form>
       )}
     </section>
+  );
+}
+
+interface Feed { id: number; name: string; url: string; category: string; enabled: boolean; is_default: boolean; status: string; last_fetched_at: string | null; last_error: string | null; items_last_run: number; items_total: number }
+
+function NewsFeedsSettings() {
+  const qc = useQueryClient();
+  const feeds = useQuery({ queryKey: ["news-feeds"], queryFn: () => api<Feed[]>("/api/news/feeds") });
+  const inv = () => qc.invalidateQueries({ queryKey: ["news-feeds"] });
+  const add = useMutation({ mutationFn: (body: Record<string, unknown>) => api("/api/news/feeds", { method: "POST", body }), onSuccess: inv });
+  const toggle = useMutation({ mutationFn: (f: Feed) => api(`/api/news/feeds/${f.id}`, { method: "PATCH", body: { enabled: !f.enabled } }), onSuccess: inv });
+  const del = useMutation({ mutationFn: (f: Feed) => api(`/api/news/feeds/${f.id}`, { method: "DELETE" }), onSuccess: inv });
+  return (
+    <>
+      <PageHeader title="News feeds" helpId="settings-news" subtitle="RSS/Atom sources for the Security News tab (refresh interval: CVE Sources → Security news feeds)" />
+      <ErrorNote error={add.error ?? toggle.error ?? del.error} />
+      <form className="card mb-4 grid gap-3 md:grid-cols-4" onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget); const form = e.currentTarget;
+        add.mutate({ name: fd.get("name"), url: fd.get("url"), category: fd.get("category") }, { onSuccess: () => form.reset() }); }}>
+        <div><label className="label" htmlFor="fn">Name</label><input id="fn" name="name" className="input w-full" required minLength={2} /></div>
+        <div className="md:col-span-2"><label className="label" htmlFor="fu">Feed URL (https)</label><input id="fu" name="url" type="url" className="input w-full" required placeholder="https://example.com/feed.xml" /></div>
+        <div><label className="label" htmlFor="fc">Category</label><select id="fc" name="category" className="input w-full"><option value="news">News</option><option value="government">Government</option><option value="vendor-intel">Vendor threat intel</option></select></div>
+        <div><button className="btn-primary">Add feed</button></div>
+      </form>
+      <div className="card overflow-x-auto p-0"><table className="min-w-full text-sm">
+        <thead className="bg-ec-surface-alt"><tr><th className="th">Feed</th><th className="th">Category</th><th className="th">Health</th><th className="th">Enabled</th><th className="th">Last fetch</th><th className="th text-right">Items</th><th className="th" /></tr></thead>
+        <tbody>{feeds.data?.map((f) => (
+          <tr key={f.id} className="border-t border-ec-surface-alt">
+            <td className="td font-medium">{f.name}{f.is_default && <span className="ml-1 text-xs text-ec-slate">(default)</span>}<div className="break-all text-xs text-ec-slate">{f.url}</div>{f.last_error && <div className="text-xs text-red-800">{f.last_error}</div>}</td>
+            <td className="td">{f.category}</td><td className="td"><HealthBadge health={f.status === "ok" ? "healthy" : f.status === "error" ? "failing" : "pending"} /></td>
+            <td className="td"><input type="checkbox" aria-label={`Enable ${f.name}`} checked={f.enabled} onChange={() => toggle.mutate(f)} /></td>
+            <td className="td text-xs">{fmtDateTime(f.last_fetched_at)}</td><td className="td text-right">{f.items_total} <span className="text-xs text-ec-slate">(+{f.items_last_run})</span></td>
+            <td className="td"><button className="text-xs text-red-800 underline" onClick={() => window.confirm(`Remove ${f.name}? Its stored items are deleted.`) && del.mutate(f)}>Remove</button></td>
+          </tr>))}</tbody></table></div>
+    </>
   );
 }

@@ -9,7 +9,9 @@ import CveListPage from "./pages/CveList";
 import CveDetailPage from "./pages/CveDetail";
 import SettingsPage from "./pages/Settings";
 import HelpCenterPage from "./pages/HelpCenter";
-import { NewsPage } from "./pages/Placeholders";
+import NewsPage from "./pages/News";
+import AssistantPage from "./pages/Assistant";
+import { useAi } from "./components/Ai";
 import AdvisoriesRoutes from "./pages/Advisories";
 import { LoadingScreen, NotFound } from "./components/StatusScreen";
 
@@ -25,6 +27,9 @@ export function helpIdFor(path: string): string {
   if (path.startsWith("/settings/alerts")) return "settings-alerts";
   if (path.startsWith("/settings/integrations")) return "settings-integrations";
   if (path.startsWith("/news")) return "news";
+  if (path.startsWith("/assistant")) return "assistant";
+  if (path.startsWith("/settings/ai")) return "settings-ai";
+  if (path.startsWith("/settings/news")) return "settings-news";
   if (path.startsWith("/settings/rbac")) return "settings-rbac";
   if (path.startsWith("/settings")) return "settings-sources";
   return "help-center";
@@ -58,6 +63,7 @@ const SETTINGS_PERMS = ["source:manage", "user:manage", "integration:manage", "s
 
 function Shell() {
   const { me, can } = useAuth();
+  const aiOn = useAi();
   const qc = useQueryClient();
   useShortcuts();
   const logout = async () => {
@@ -80,6 +86,7 @@ function Shell() {
             {["advisory:create", "advisory:approve", "advisory:send", "advisory:export", "template:manage"].some(can) && <NavLink to="/advisories" className={tab}>Advisories</NavLink>}
             {can("news:view") && <NavLink to="/news" className={tab}>Security News</NavLink>}
             {SETTINGS_PERMS.some(can) && <NavLink to="/settings" className={tab}>Settings</NavLink>}
+            {aiOn && <NavLink to="/assistant" className={tab}>Assistant</NavLink>}
             <NavLink to="/help" className={tab}>Help Center</NavLink>
           </nav>
           <div className="ml-auto flex items-center gap-3 text-sm text-ec-slate-light">
@@ -95,6 +102,7 @@ function Shell() {
           <Route path="/cves/:cveId" element={<CveDetailPage />} />
           <Route path="/advisories/*" element={<AdvisoriesRoutes />} />
           <Route path="/news" element={<NewsPage />} />
+          <Route path="/assistant" element={<AssistantPage />} />
           <Route path="/settings/*" element={<SettingsPage />} />
           <Route path="/help" element={<HelpCenterPage />} />
           <Route path="*" element={<NotFound />} />

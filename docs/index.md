@@ -16,7 +16,7 @@ stakeholder advisory emails.
 | **Advisory Email Generator** | HTML advisories, an asset validation matrix, an Excel attachment, `.eml` / Copy for Outlook / SMTP delivery and an approval workflow | **Phase 2 ✅** |
 | **Integrations** | Plugin connectors for Qualys, Tanium, Wiz, Zafran, ArmorCode, ServiceNow CMDB and more | **Phase 3 ✅** |
 | **Identity** | Okta SAML 2.0, SailPoint group → role mapping (SCIM 2.0), alerts and scheduling | **Phase 4 ✅** (OIDC deferred) |
-| **Security News & AI** | De-duplicated news feeds, a multi-provider AI layer with a redaction policy | Phase 5 |
+| **Security News & AI** | De-duplicated news feeds, a multi-provider AI layer with a redaction policy | **Phase 5 ✅** |
 | **Hardening & exports** | Terraform, DR and network diagrams, threat model, runbooks, guided tours, DOCX/standalone HTML docs | Phase 6 |
 
 ## Roadmap
@@ -30,9 +30,9 @@ Delivery is phased. Each phase ships its own in-app help, documentation and diag
    entry, versioned templates with approval, and brand identity applied across the app, emails and exports.
 3. **Phase 3.** Connector framework and the first six connectors, CVE asset correlation with CMDB
    enrichment, and an integration guide for each.
-4. **Phase 4 (this release).** Okta SAML and SP metadata, SailPoint mapping and SCIM, alerts and scheduling,
+4. **Phase 4.** Okta SAML and SP metadata, SailPoint mapping and SCIM, alerts and scheduling,
    custom roles, setup wizards, identity flow and sequence diagrams.
-5. **Phase 5.** Security News and the AI provider layer.
+5. **Phase 5 (this release).** Security News and the AI provider layer with AI features.
 6. **Phase 6.** Hardening, Terraform, DR/network diagrams, STRIDE threat model, DFDs, runbooks, guided
    tours, DOCX and standalone HTML exports.
 
@@ -42,7 +42,7 @@ Delivery is phased. Each phase ships its own in-app help, documentation and diag
   [Advisories](user-guide/advisories.md)
 - **Admins**: [Installation](getting-started/installation.md), [Users & RBAC](admin-guide/rbac.md),
   [SMTP](admin-guide/smtp.md), [Integrations](integrations/index.md), [Okta SSO](admin-guide/okta-saml.md),
-  [SailPoint](admin-guide/sailpoint.md), [Alerts](admin-guide/alerts.md),
+  [SailPoint](admin-guide/sailpoint.md), [Alerts](admin-guide/alerts.md), [AI](admin-guide/ai.md),
   [Ingestion sources](admin-guide/ingestion-sources.md)
 - **Security & architecture reviewers**: [AWS architecture](architecture/high-level.md),
   [Security overview](security/overview.md), [ADRs](architecture/adr/index.md)

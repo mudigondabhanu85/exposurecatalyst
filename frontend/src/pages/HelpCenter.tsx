@@ -3,7 +3,9 @@ import { useQuery } from "@tanstack/react-query";
 import { api, type HelpPage, type HelpTopic } from "../api";
 import { useHelp } from "../help";
 import { Markdown } from "../components/Markdown";
-import { PageHeader } from "../components/ui";
+import { ErrorNote, PageHeader } from "../components/ui";
+import { AiBox, AiMeta, AiText, useAi, type AiResult } from "../components/Ai";
+import { useMutation } from "@tanstack/react-query";
 
 type Tab = "topics" | "glossary" | "faq" | "shortcuts" | "whatsnew";
 const TABS: { id: Tab; label: string }[] = [
@@ -27,6 +29,9 @@ export default function HelpCenterPage() {
     enabled: term.trim().length >= 2,
   });
   const changelog = useQuery({ queryKey: ["changelog"], queryFn: () => api<string>("/api/help/changelog"), enabled: tab === "whatsnew" });
+  const aiOn = useAi();
+  const [question, setQuestion] = useState("");
+  const ask = useMutation({ mutationFn: (qq: string) => api<AiResult & { citations: { id: string; title: string }[] }>("/api/ai/help", { method: "POST", body: { question: qq } }) });
   const pages = topics.data?.filter((t) => !["glossary", "faq", "shortcuts"].includes(t.id)) ?? [];
 
   return (
@@ -55,6 +60,21 @@ export default function HelpCenterPage() {
           </ul>
         )}
       </div>
+
+      {aiOn && (
+        <div className="mb-4"><AiBox title="Ask Help">
+          <form className="flex gap-2" onSubmit={(e) => { e.preventDefault(); if (question.trim().length >= 3) ask.mutate(question); }}>
+            <label htmlFor="askhelp" className="sr-only">Question</label>
+            <input id="askhelp" className="input flex-1" value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={500} placeholder="e.g. How do I connect SailPoint?" />
+            <button className="btn-primary" disabled={ask.isPending}>{ask.isPending ? "Looking…" : "Ask"}</button>
+          </form>
+          <ErrorNote error={ask.error} />
+          {ask.data && (<div className="mt-3"><AiText text={ask.data.text} />
+            {ask.data.citations.length > 0 && <p className="mt-2 text-xs">Sources: {ask.data.citations.map((c, i) => <span key={c.id}>{i > 0 && ", "}<button className="link" onClick={() => openHelp(c.id)}>{c.title}</button></span>)}</p>}
+            {ask.data.provider && <AiMeta r={ask.data} />}</div>)}
+          <p className="mt-2 text-xs text-ec-slate">Answers only from the help topics you can see, with citations.</p>
+        </AiBox></div>
+      )}
 
       <div role="tablist" aria-label="Help sections" className="mb-4 flex flex-wrap gap-1 border-b border-ec-border">
         {TABS.map((t) => (

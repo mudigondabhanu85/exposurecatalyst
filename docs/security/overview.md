@@ -102,6 +102,19 @@ In AWS, the Network Firewall domain allowlist enforces the same policy at the ne
 | Strict cookies after a cross-site IdP POST | Same-origin meta-refresh hop. No inline script, so CSP stays strict |
 | Alert webhooks as exfiltration channel | Host allowlist (Slack and Teams hosts only). Encrypted at rest. Never returned |
 
+## News & AI controls (Phase 5)
+
+| Risk | Control |
+|---|---|
+| XXE / entity expansion in feeds | `defusedxml`. Feeds with entities are rejected |
+| SSRF via admin feed URLs | `https`, single-host allowlist per feed, private and metadata addresses blocked, redirects re-validated |
+| Copyright | Headline, ≤300-char excerpt and link only. No article bodies stored or shown |
+| Sensitive data sent to AI vendors | Redaction of hostnames, IPs, owners, emails, ARNs and instance/account IDs before external calls. Provider allowlist. Bedrock option keeps data in AWS. No prompt/response storage |
+| Prompt injection from CVE, news or tool text | Fenced untrusted data with fence neutralization. Hardened system prompt. No tools. Schema-validated and grounded outputs. Human review for advisory drafts |
+| Markdown/image exfiltration in AI output | No raw HTML, no images rendered. CSP `img-src 'self' data:` |
+| Cost abuse | Monthly budget, per-user rate limit, usage log |
+| Credential exposure | Provider keys encrypted, write-only. Bedrock uses the IAM task role (no keys) |
+
 ## Secrets management
 
 - `EXCAT_ENCRYPTION_KEY` (Fernet) encrypts secrets stored in the DB. In AWS it's delivered from Secrets Manager

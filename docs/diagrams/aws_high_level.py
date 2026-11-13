@@ -38,7 +38,7 @@ from diagrams.saas.identity import Okta
 
 NAME = "aws_high_level"
 TITLE = "ExposureCatalyst — AWS Reference Architecture"
-SUBTITLE = "Production deployment · single region · Multi-AZ · v0.4"
+SUBTITLE = "Production deployment · single region · Multi-AZ · v0.5"
 
 
 def e(kind: str, text: str, constraint: bool = True, minlen: int = 1) -> Edge:

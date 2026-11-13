@@ -3,6 +3,21 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.5.0] — 2026-11-13 — Phase 5: Security News and AI
+
+### Added
+- **Security News**: 13 curated feeds (CISA, major security press, vendor threat intel). Hardened RSS/Atom
+  parsing. URL and headline de-duplication with cross-outlet clustering. CVE extraction linked to CVE
+  Intelligence. Topic tags and filters. Feed management with per-feed health. Headline and excerpt only.
+- **AI provider layer**: 27 providers across commercial, cloud (Azure OpenAI, Bedrock, Vertex, watsonx, NIM),
+  aggregators and self-hosted. Per-feature routing with fallback, provider allowlist, monthly budget,
+  per-user rate limit, usage and cost tracking.
+- **AI features**: CVE plain/executive summaries, risk narrative with priority, remediation guidance, advisory
+  draft suggestions, news brief with themes and threat actors, natural-language search, analyst assistant,
+  Ask Help with citations.
+- **Data protection**: redaction of environment identifiers before external calls (restored for the user),
+  untrusted-content fencing, schema-validated and grounded outputs, image-free rendering.
+
 ## [0.4.0] — 2026-11-13 — Phase 4: identity, governance and alerts
 
 ### Added

@@ -58,6 +58,13 @@ Service accounts and API tokens for automation are planned for a later phase.
 | `/scim/v2/{ServiceProviderConfig, ResourceTypes, Schemas, Users, Groups}` | SCIM bearer token | SCIM 2.0 provisioning (RFC 7644) |
 | `GET/POST /api/alerts` · `PUT/DELETE /api/alerts/{id}` · `POST …/{id}/run` · `GET …/{id}/events` | `settings:manage` | Alert rules |
 | `DELETE /api/admin/roles/{id}` | `role:manage` | Delete a custom role (unassigned only) |
+| `GET /api/news` (q, source[], tag, cve, date_from/to, page) · `GET /api/news/by-cve/{cve_id}` | `news:view` | De-duplicated stories |
+| `GET/POST /api/news/feeds` · `PATCH/DELETE /api/news/feeds/{id}` | `news:manage` | Feed management |
+| `GET /api/ai/status` | session | Whether AI is available to the caller |
+| `POST /api/ai/cves/{cve_id}/insight` `{kind: plain\|executive\|risk\|remediation}` | `ai:use` | CVE AI analysis |
+| `POST /api/ai/advisories/{id}/draft` | `ai:use` + `advisory:create` | Advisory section suggestions (not saved) |
+| `POST /api/ai/news/brief` · `/api/ai/search` · `/api/ai/chat` · `/api/ai/help` | `ai:use` (+ `news:view` / `cve:view`) | News brief, NL search, assistant, Ask Help |
+| `GET /api/ai/catalog` · `GET/PUT /api/ai/policy` · `GET/POST /api/ai/providers` · `PUT/DELETE …/{id}` · `POST …/{id}/test` · `GET /api/ai/usage` | `ai:manage` | AI configuration and usage |
 | `GET /metrics` | network-restricted | Prometheus metrics |
 
 ## Errors

@@ -7,6 +7,7 @@ import { InfoTip } from "../help";
 import { EmptyState, ErrorNote, PageHeader, SeverityBadge } from "../components/ui";
 import { Forbidden, LoadingScreen } from "../components/StatusScreen";
 import TemplatesPage from "./Templates";
+import { AiBox, AiMeta, useAi } from "../components/Ai";
 
 const STATUS_STYLE: Record<string, string> = {
   draft: "bg-ec-surface-alt text-ec-navy",
@@ -132,6 +133,8 @@ function AdvisoryEditor() {
   const [previewKey, setPreviewKey] = useState(0);
   const [note, setNote] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
+  const aiOn = useAi();
+  const draft = useMutation({ mutationFn: () => api<{ suggestion: Record<string, string>; provider: string; model: string; redacted_values: number; fallbacks: string[]; note: string }>(`/api/ai/advisories/${id}/draft`, { method: "POST" }) });
   const set = (a: Advisory) => { qc.setQueryData(key, a); setPreviewKey((k) => k + 1); };
   const call = useMutation({
     mutationFn: ({ path, method = "POST", body }: { path: string; method?: string; body?: unknown }) => api<Advisory>(`/api/advisories/${id}${path}`, { method, body }),
@@ -219,6 +222,20 @@ function AdvisoryEditor() {
         {["draft", "in_review", "approved"].includes(a.status) && can("advisory:create") && <button className="btn-secondary ml-auto" onClick={() => window.confirm("Cancel this advisory?") && call.mutate({ path: "/cancel" })}>Cancel advisory</button>}
       </div>
       {confirming && <ConfirmSend adv={a} busy={call.isPending} onCancel={() => setConfirming(false)} onConfirm={() => call.mutate({ path: "/send", body: { confirm: true } }, { onSettled: () => setConfirming(false), onSuccess: () => setNote("Sent.") })} />}
+
+      {editable && aiOn && (
+        <div className="mb-4"><AiBox title="Draft with AI" actions={<button className="btn-secondary" disabled={draft.isPending} onClick={() => draft.mutate()}>{draft.isPending ? "Drafting…" : draft.data ? "Redraft" : "Draft sections"}</button>}>
+          <ErrorNote error={draft.error} />
+          {!draft.data && !draft.isPending && <p className="text-sm text-ec-slate">Suggests subject, summary, business impact, remediation and workaround from the CVE and your exposure. Nothing is saved until you apply a suggestion — and every advisory still needs approval.</p>}
+          {draft.data && (<>
+            <ul className="space-y-3">{Object.entries(draft.data.suggestion).map(([k, v]) => (
+              <li key={k} className="rounded-md bg-ec-surface-alt p-3"><div className="mb-1 flex items-center justify-between"><span className="label mb-0">{k.replace("_", " ")}</span>
+                <button className="btn-secondary" onClick={() => call.mutate({ path: "", method: "PATCH", body: { [k]: v } }, { onSuccess: () => setNote(`Applied AI suggestion to ${k.replace("_", " ")} — review it before submitting.`) })}>Apply</button></div>
+                <p className="whitespace-pre-line text-sm">{v}</p></li>))}</ul>
+            <AiMeta r={draft.data} />
+          </>)}
+        </AiBox></div>
+      )}
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="space-y-4">

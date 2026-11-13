@@ -57,6 +57,13 @@ Every setting is an environment variable with the `EXCAT_` prefix (also read fro
 | `EXCAT_CONNECTOR_MAX_ASSETS` | `int` | `10000` | Maximum affected assets fetched from one integration for one CVE (result is flagged truncated). |
 | `EXCAT_CONNECTOR_TIMEOUT_SECONDS` | `float` | `60.0` | HTTP timeout for connector API calls. |
 | `EXCAT_CONNECTOR_CACHE_MINUTES` | `int` | `60` | Re-use an integration's CVE results younger than this instead of calling the tool again. |
+| `EXCAT_NEWS_INTERVAL_MINUTES` | `int` | `30` | Default refresh interval for news feeds. |
+| `EXCAT_NEWS_RETENTION_DAYS` | `int` | `90` | Delete news items older than this. |
+| `EXCAT_NEWS_MAX_ITEMS_PER_FEED` | `int` | `100` | Newest items processed per feed per run. |
+| `EXCAT_AI_TIMEOUT_SECONDS` | `float` | `90.0` | Timeout for AI provider calls. |
+| `EXCAT_AI_MAX_CONTEXT_CHARS` | `int` | `24000` | Maximum untrusted context characters sent per AI request. |
+| `EXCAT_AI_ALLOW_PRIVATE_ENDPOINTS` | `bool` | `False` | Allow self-hosted AI endpoints (Ollama, vLLM, LM Studio) on private/loopback addresses. |
+| `EXCAT_AI_RATE_LIMIT_PER_USER_PER_MINUTE` | `int` | `20` | AI requests allowed per user per minute. |
 | `EXCAT_FRONTEND_DIST_DIR` | `Path` | `frontend/dist` | Built React app served at /. |
 | `EXCAT_DOCS_SITE_DIR` | `Path` | `dist/docs/site` | Built MkDocs site served at /docs. |
 | `EXCAT_HELP_DIR` | `Path` | `docs/help` | In-app help Markdown (single source with docs). |

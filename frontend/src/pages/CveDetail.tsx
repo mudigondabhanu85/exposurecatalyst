@@ -5,6 +5,7 @@ import { api, fmtDate, fmtDateTime, pct, type CveDetail } from "../api";
 import { useAuth } from "../auth";
 import { InfoTip } from "../help";
 import { LoadingScreen } from "../components/StatusScreen";
+import { CveAiPanel, useAi } from "../components/Ai";
 import { EmptyState, ErrorNote, KevBadge, PageHeader, SeverityBadge } from "../components/ui";
 
 interface PanelSource { integration_id: number; name: string; source: string; checked_at: string | null; status: string; error: string | null; asset_count: number; truncated: boolean }
@@ -39,6 +40,9 @@ export default function CveDetailPage() {
   const q = useQuery({ queryKey: ["cve", cveId], queryFn: () => api<CveDetail>(`/api/cves/${encodeURIComponent(cveId)}`) });
   const assets = useQuery({ queryKey: ["cve-assets", cveId], queryFn: () => api<AssetPanel>(`/api/cves/${encodeURIComponent(cveId)}/assets`) });
   const qc = useQueryClient();
+  const aiOn = useAi();
+  const news = useQuery({ queryKey: ["cve-news", cveId], queryFn: () => api<{ id: number; title: string; url: string; source: string; published_at: string }[]>(`/api/news/by-cve/${encodeURIComponent(cveId)}`),
+                          enabled: can("news:view") });
   const refreshAssets = useMutation({ mutationFn: () => api<AssetPanel>(`/api/cves/${encodeURIComponent(cveId)}/assets/refresh`, { method: "POST" }),
                                       onSuccess: (p) => qc.setQueryData(["cve-assets", cveId], p) });
   const c = q.data;
@@ -72,6 +76,7 @@ export default function CveDetailPage() {
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="space-y-4 lg:col-span-2">
+          {aiOn && <CveAiPanel cveId={c.cve_id} />}
           <section className="card">
             <h2 className="mb-2 font-semibold">Description<Prov cve={c} field="description" /></h2>
             {/* Rendered as text: upstream content is untrusted and never interpreted as HTML. */}
@@ -144,6 +149,14 @@ export default function CveDetailPage() {
             </>)}
           </section>
 
+          {news.data && news.data.length > 0 && (
+            <section className="card">
+              <h2 className="mb-2 font-semibold">In the news</h2>
+              <ul className="space-y-1 text-sm">{news.data.map((n) => (
+                <li key={n.id}><a className="link" href={n.url} target="_blank" rel="noopener noreferrer nofollow">{n.title}</a>
+                  <div className="text-xs text-ec-slate">{n.source} · {fmtDate(n.published_at)}</div></li>))}</ul>
+            </section>
+          )}
           <section className="card">
             <h2 className="mb-2 font-semibold">Timeline</h2>
             <ol className="relative ml-2 border-l border-ec-border">
