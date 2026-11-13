@@ -13,7 +13,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import inspect
 
 from exposurecatalyst import __version__
-from exposurecatalyst.api import admin, advisories, auth, cves, health, help, smtp, sources
+from exposurecatalyst.api import admin, advisories, auth, cves, health, help, integrations, smtp, sources
 from exposurecatalyst.config import Settings, get_settings
 from exposurecatalyst.db.session import get_engine, get_session_factory, init_engine, session_scope
 from exposurecatalyst.ingestion.service import ensure_source_states
@@ -79,7 +79,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                            allow_headers=["Content-Type", "X-CSRF-Token"])
 
     for r in (health.router, auth.router, cves.router, sources.router, help.router, admin.router,
-              advisories.router, advisories.templates_router, smtp.router):
+              advisories.router, advisories.templates_router, smtp.router, integrations.router):
         app.include_router(r)
 
     @app.exception_handler(Exception)

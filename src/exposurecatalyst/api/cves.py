@@ -221,19 +221,7 @@ def get_cve(cve_id: str, _: Principal = Depends(require(Permission.CVE_VIEW)),
     return CveDetail.model_validate(data)
 
 
-class AssetPanel(BaseModel):
-    integrations_configured: bool
-    total_unique_assets: int
-    sources: list[dict[str, Any]]
-    message: str
-
-
-@router.get("/cves/{cve_id}/assets", response_model=AssetPanel)
-def cve_assets(cve_id: str, _: Principal = Depends(require(Permission.CVE_VIEW))) -> AssetPanel:
-    # Populated by the connector framework in Phase 3.
-    return AssetPanel(integrations_configured=False, total_unique_assets=0, sources=[],
-                      message="No integrations configured. An admin can add Qualys, Tanium, Wiz, Zafran, "
-                              "ArmorCode or ServiceNow CMDB under Settings → Integrations.")
+# Affected-asset panel: see api/integrations.py (GET /api/cves/{cve_id}/assets).
 
 
 # ---- Saved searches ---------------------------------------------------------------------------

@@ -24,7 +24,9 @@ MAX_REDIRECTS = 3
 
 
 class SourceHTTPError(RuntimeError):
-    pass
+    def __init__(self, message: str, status: int | None = None):
+        super().__init__(message)
+        self.status = status
 
 
 class RateLimiter:
@@ -75,13 +77,17 @@ class SourceClient:
         headers: dict[str, str] | None = None,
         transport: httpx.BaseTransport | None = None,
         sleep: Callable[[float], None] = time.sleep,
+        allowlist: list[str] | None = None,
+        timeout: float | None = None,
     ):
         self.name = name
         self.settings = settings
+        # Hosts this client may call: an explicit list (connectors) or the global egress allowlist.
+        self.allowlist = allowlist if allowlist is not None else settings.egress_allowlist_list
         self.sleep = sleep
         self.limiter = RateLimiter(rate, per, sleep=sleep)
         self.client = httpx.Client(
-            timeout=settings.http_timeout_seconds,
+            timeout=timeout or settings.http_timeout_seconds,
             headers={"User-Agent": settings.http_user_agent, **(headers or {})},
             transport=transport,
             follow_redirects=False,  # redirects could bypass the SSRF allowlist
@@ -99,7 +105,7 @@ class SourceClient:
         """GET with retries. Redirects are followed manually (≤3 hops) and every hop is re-validated
         against the SSRF guard and egress allowlist, so a redirect can never reach a blocked host."""
         for _hop in range(MAX_REDIRECTS + 1):
-            resp = self._get_once(url, params=params, headers=headers, ok_statuses=ok_statuses)
+            resp = self.request("GET", url, params=params, headers=headers, ok_statuses=ok_statuses)
             if resp.status_code not in REDIRECT_STATUS or resp.status_code in ok_statuses:
                 return resp
             location = resp.headers.get("location")
@@ -108,11 +114,15 @@ class SourceClient:
             url, params = urljoin(str(resp.request.url), location), None
         raise SourceHTTPError(f"{self.name}: too many redirects")
 
-    def _get_once(self, url: str, *, params: dict[str, Any] | None, headers: dict[str, str] | None,
-                  ok_statuses: tuple[int, ...]) -> httpx.Response:
+    def request(self, method: str, url: str, *, params: dict[str, Any] | None = None,
+                headers: dict[str, str] | None = None, json: Any = None, data: Any = None,
+                auth: httpx.Auth | tuple[str, str] | None = None,
+                ok_statuses: tuple[int, ...] = (200,)) -> httpx.Response:
+        """One request with retries (429/5xx/transport errors). Redirect responses are returned as-is:
+        only GET follows them (see ``get``); for other methods a redirect is an error."""
         validate_outbound_url(
             url,
-            allowlist=self.settings.egress_allowlist_list,
+            allowlist=self.allowlist,
             allow_private=self.settings.ssrf_allow_private_networks,
             resolve_dns=self.settings.ssrf_resolve_dns,
         )
@@ -121,15 +131,17 @@ class SourceClient:
         for attempt in range(retries + 1):
             self.limiter.acquire()
             try:
-                resp = self.client.get(url, params=params, headers=headers)
+                resp = self.client.request(method, url, params=params, headers=headers, json=json, data=data,
+                                           auth=auth)
             except httpx.TransportError as exc:
                 last_error = f"{type(exc).__name__}"
                 delay = self._backoff(attempt)
             else:
-                if resp.status_code in ok_statuses or resp.status_code in REDIRECT_STATUS:
+                if resp.status_code in ok_statuses or (method == "GET" and resp.status_code in REDIRECT_STATUS):
                     return resp
                 if resp.status_code not in RETRY_STATUS:
-                    raise SourceHTTPError(f"{self.name}: HTTP {resp.status_code} from {url}")
+                    raise SourceHTTPError(f"{self.name}: HTTP {resp.status_code} from {url.split('?')[0]}",
+                                          status=resp.status_code)
                 last_error = f"HTTP {resp.status_code}"
                 delay = _retry_after(resp) or self._backoff(attempt)
             if attempt < retries:

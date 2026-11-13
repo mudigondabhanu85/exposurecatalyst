@@ -141,6 +141,15 @@ class Settings(BaseSettings):
     )
     smtp_timeout_seconds: float = Field(30.0, gt=0, description="SMTP connect/send timeout.")
 
+    # --- Integrations ---------------------------------------------------------------------
+    connector_max_assets: int = Field(
+        10_000, ge=100, description="Maximum affected assets fetched from one integration for one CVE (result is flagged truncated)."
+    )
+    connector_timeout_seconds: float = Field(60.0, gt=0, description="HTTP timeout for connector API calls.")
+    connector_cache_minutes: int = Field(
+        60, ge=0, description="Re-use an integration's CVE results younger than this instead of calling the tool again."
+    )
+
     # --- Paths -------------------------------------------------------------------------------
     frontend_dist_dir: Path = Field(PROJECT_ROOT / "frontend" / "dist", description="Built React app served at /.")
     docs_site_dir: Path = Field(PROJECT_ROOT / "dist" / "docs" / "site", description="Built MkDocs site served at /docs.")
