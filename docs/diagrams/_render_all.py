@@ -7,11 +7,14 @@ Exit code is non-zero if any diagram fails, so CI fails the docs build.
 from __future__ import annotations
 
 import importlib
+import json
+import subprocess
 import sys
+import tempfile
 import traceback
 from pathlib import Path
 
-from _aws_style import embed_svg_images
+from _aws_style import drawio_from_graphviz, embed_svg_images
 
 HERE = Path(__file__).parent
 
@@ -28,7 +31,14 @@ def main(out: Path) -> int:
             mod.build(out, "svg", 96)
             embed_svg_images(out / f"{name}.svg")
             mod.build(out, "png", 300)
-            mod.drawio(out / f"{name}.drawio")
+            if getattr(mod, "AUTO_DRAWIO", False):
+                with tempfile.TemporaryDirectory() as tmp:
+                    mod.build(Path(tmp), "dot", 72)
+                    layout = json.loads(subprocess.run(["dot", "-Tjson", str(Path(tmp) / f"{name}.dot")],
+                                                       check=True, capture_output=True, text=True).stdout)
+                drawio_from_graphviz(layout, out / f"{name}.drawio", name, mod.TITLE, mod.SUBTITLE)
+            else:
+                mod.drawio(out / f"{name}.drawio")
             print(f"rendered {name}: svg, png@300dpi, drawio")
         except Exception:  # noqa: BLE001
             failures += 1

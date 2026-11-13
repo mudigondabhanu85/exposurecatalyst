@@ -58,6 +58,18 @@ def edge_label(text: str) -> str:
             f'<td><font point-size="10">&nbsp;{body}</font></td></tr></table>>')
 
 
+def flow(kind: str, text: str, *, constraint: bool = True, minlen: int = 1, data: str | None = None):
+    """Labelled, directional edge. ``data`` appends a data classification, e.g. 'Confidential'."""
+    from diagrams import Edge
+
+    attrs = dict(EDGE[kind])
+    if not constraint:
+        attrs["constraint"] = "false"
+    if minlen > 1:
+        attrs["minlen"] = str(minlen)
+    return Edge(xlabel=edge_label(f"{text} [{data}]" if data else text), **attrs)
+
+
 def node_attrs(lines: int = 2) -> dict:
     return {"height": str(1.9 + 0.35 * lines), "fontsize": "12", "fontname": FONT}
 
@@ -158,6 +170,8 @@ _DRAWIO_GROUP = {
     "security": "rounded=1;arcSize=3;strokeColor=#DD344C;fillColor=none;fontColor=#DD344C;dashed=1;",
     "external": "rounded=1;arcSize=3;strokeColor=#545B64;fillColor=#F4F4F4;fontColor=#232F3E;dashed=0;",
     "legend": "rounded=1;arcSize=3;strokeColor=#D5DBE4;fillColor=#FFFFFF;fontColor=#0B1B33;fontFamily=Space Grotesk;align=left;spacingLeft=10;",
+    "az": "rounded=0;strokeColor=#147EBA;fillColor=none;fontColor=#147EBA;dashed=1;dashPattern=8 4;",
+    "trust": "rounded=0;strokeColor=#D13212;fillColor=none;fontColor=#D13212;dashed=1;dashPattern=10 5;strokeWidth=2;",
 }
 _GROUP_COMMON = "points=[[0,0],[0.25,0],[0.5,0],[0.75,0],[1,0],[1,0.25],[1,0.5],[1,0.75],[1,1],[0.75,1],[0.5,1],[0.25,1],[0,1],[0,0.75],[0,0.5],[0,0.25]];outlineConnect=0;gradientColor=none;html=1;whiteSpace=wrap;fontSize=13;fontStyle=1;container=0;verticalAlign=top;align=left;spacingLeft=30;"
 _ICON = ("sketch=0;outlineConnect=0;fontColor=#232F3E;gradientColor=none;strokeColor=#ffffff;dashed=0;"
@@ -256,3 +270,134 @@ class Drawio:
                f'arrows="1" fold="1" page="1" pageScale="1" pageWidth="{self.width}" pageHeight="{self.height}" background="#FFFFFF" math="0" shadow="0">'
                f'<root><mxCell id="0"/><mxCell id="1" parent="0"/>{body}</root></mxGraphModel></diagram></mxfile>')
         path.write_text(xml, encoding="utf-8")
+
+
+# ---- draw.io generated from the Graphviz layout (single source for SVG/PNG and .drawio) --------------
+
+_CATEGORY_COLOR = {"network": "#8C4FFF", "compute": "#ED7100", "database": "#C925D1", "storage": "#7AA116",
+                   "security": "#DD344C", "integration": "#E7157B", "management": "#E7157B", "devtools": "#ED7100",
+                   "ml": "#01A88D", "engagement": "#DD344C", "general": "#232F3E", "analytics": "#8C4FFF"}
+# icon file stem → (mxgraph.aws4 name, is_resource_icon)
+_ICON_MAP = {
+    "elb-application-load-balancer": ("application_load_balancer", False), "nat-gateway": ("nat_gateway", False),
+    "endpoint": ("endpoints", False), "users": ("users", False), "client": ("client", False),
+    "internet-gateway": ("internet_gateway", False), "internet-alt1": ("internet_alt1", False),
+    "route-53": ("route_53", True), "cloudfront": ("cloudfront", True), "waf": ("waf", True),
+    "certificate-manager": ("certificate_manager_3", True), "fargate": ("fargate", True),
+    "elastic-container-service-service": ("ecs", True), "elastic-container-service": ("ecs", True),
+    "aurora": ("aurora", True), "aurora-instance": ("aurora", True), "elasticache-for-redis": ("elasticache", True),
+    "simple-storage-service-s3-bucket": ("s3", True), "simple-storage-service-s3": ("s3", True),
+    "secrets-manager": ("secrets_manager", True), "key-management-service": ("key_management_service", True),
+    "kms": ("key_management_service", True), "cloudwatch": ("cloudwatch_2", True), "x-ray": ("xray", True),
+    "cloudtrail": ("cloudtrail", True), "guardduty": ("guardduty", True), "security-hub": ("security_hub", True),
+    "simple-queue-service-sqs": ("sqs", True), "eventbridge": ("eventbridge", True),
+    "simple-email-service-ses": ("simple_email_service", True), "bedrock": ("bedrock", True),
+    "network-firewall": ("network_firewall", True), "iam-role": ("role", False), "vpc": ("virtual_private_cloud", True),
+    "elb-network-load-balancer": ("network_load_balancer", False), "general": ("general", False),
+}
+_EDGE_KIND = {AWS_INK.lower(): "sync", "#e7157b": "async", "#dd344c": "egress", "#545b64": "ext", "#7d8998": "mgmt",
+              "#d13212": "egress"}
+_TAG = re.compile(r"<[^>]+>")
+
+
+def _plain(htmlish: str) -> tuple[str, str]:
+    """Split an HTML-like Graphviz label into (bold title, rest)."""
+    if not htmlish:
+        return "", ""
+    s = htmlish.strip()
+    s = s[1:-1] if s.startswith("<") and s.endswith(">") else s
+    title_m = re.search(r"<b>(.*?)</b>", s, re.S)
+    title = html.unescape(_TAG.sub("", title_m.group(1))).strip() if title_m else ""
+    rest = html.unescape(_TAG.sub(" ", s[title_m.end():] if title_m else s))
+    return title, re.sub(r"\s+", " ", rest).strip()
+
+
+def _edge_text(htmlish: str) -> str:
+    if not htmlish:
+        return ""
+    cells = [html.unescape(_TAG.sub("", c)).replace("\xa0", " ").strip()
+             for c in re.findall(r"<td[^>]*>(.*?)</td>", htmlish, re.S)]
+    if cells:
+        return " ".join(c for c in cells if c)
+    return html.unescape(_TAG.sub(" ", htmlish.strip("<>"))).strip()
+
+
+def _group_kind(obj: dict) -> str:
+    pen = str(obj.get("pencolor", "")).lower()
+    style = str(obj.get("style", ""))
+    fill = str(obj.get("bgcolor", "")).lower()
+    if pen == "#d13212":
+        return "trust"
+    if pen == "#dd344c":
+        return "security"
+    if pen == "#8c4fff":
+        return "vpc"
+    if pen == "#7aa116":
+        return "public"
+    if pen == "#00a4a6":
+        return "private"
+    if pen == "#147eba":
+        if fill == "#e9f3fa":
+            return "isolated"
+        return "region" if "1.5" not in str(obj.get("penwidth", "")) else "az"
+    if pen == AWS_INK.lower():
+        return "aws_cloud"
+    if pen == "#545b64":
+        return "external"
+    if pen == BRAND_BORDER.lower():
+        return "legend"
+    return "layer"
+
+
+def drawio_from_graphviz(layout: dict, path: Path, name: str, title: str, subtitle: str) -> None:
+    """Build an editable .drawio from `dot -Tjson` output, reusing the exact Graphviz layout."""
+    x1, y1, x2, y2 = (float(v) for v in layout["bb"].split(","))
+    height = y2 - y1
+    d = Drawio(name, int(x2 - x1) + 80, int(height) + 160)
+    d.title(title, subtitle)
+    d.dy = 90
+    ox = 20
+
+    def fy(y: float) -> float:
+        return height - y
+
+    objects = layout.get("objects", [])
+    for obj in objects:  # clusters first (drawn underneath)
+        if "bb" in obj and str(obj.get("name", "")).startswith("cluster"):
+            if obj.get("name") == "cluster_legend":
+                continue
+            bx1, by1, bx2, by2 = (float(v) for v in obj["bb"].split(","))
+            t, sub_ = _plain(str(obj.get("label", "")))
+            d.group(t or obj["name"].removeprefix("cluster_"), _group_kind(obj), int(bx1 + ox), int(fy(by2)),
+                    int(bx2 - bx1), int(by2 - by1), sub_)
+    ids: dict[int, str] = {}
+    for obj in objects:
+        if "pos" not in obj or "_gvid" not in obj:
+            continue
+        px, py = (float(v) for v in obj["pos"].split(","))
+        image = str(obj.get("image", ""))
+        role, service = _plain(str(obj.get("label", "")))
+        if not image:
+            continue  # legend / plaintext helpers are re-created below
+        p = Path(image)
+        stem, category = p.stem, p.parent.name
+        size = 56
+        x, y = int(px - size / 2 + ox), int(fy(py) - 60)
+        if p.parent.parent.name == "aws" and (stem in _ICON_MAP or category in _CATEGORY_COLOR):
+            shape, res = _ICON_MAP.get(stem, (stem.replace("-", "_"), True))
+            ids[obj["_gvid"]] = d.icon(role, service, shape, _CATEGORY_COLOR.get(category, AWS_INK), x, y, size, resource=res)
+        else:
+            ids[obj["_gvid"]] = d.box(role or stem, service, x - 70, y, 200, 56)
+    for e in layout.get("edges", []):
+        if "invis" in str(e.get("style", "")) or e.get("tail") not in ids or e.get("head") not in ids:
+            continue
+        kind = _EDGE_KIND.get(str(e.get("color", "")).lower(), "sync")
+        if "dotted" in str(e.get("style", "")):
+            kind = "mgmt"
+        d.edge(ids[e["tail"]], ids[e["head"]], _edge_text(str(e.get("xlabel") or e.get("label") or "")), kind)
+    d.text("<b>━━▶</b> synchronous · <span style='color:#E7157B'><b>╍╍▶</b></span> async/event · "
+           "<span style='color:#DD344C'><b>━━▶</b></span> egress / sensitive · "
+           "<span style='color:#545B64'><b>━━▶</b></span> external · <span style='color:#7D8998'><b>┈┈▶</b></span> "
+           "management · <span style='color:#D13212'>- - -</span> trust boundary", 20, int(height) + 20, 900, 40,
+           font=BRAND_BODY_FONT)
+    d.write(path)
