@@ -295,3 +295,18 @@ def test_ask_help_cites_only_real_topics(ai_on, captured, login):
     captured[1]["reply"] = "Use Refresh now [cve-intelligence] and see [made-up-topic]."
     r = login("Security Analyst", username="ana").post("/api/ai/help", json={"question": "How do I refresh EPSS?"}).json()
     assert [c["id"] for c in r["citations"]] == ["cve-intelligence"]
+
+
+def test_seed_feeds_corrects_retired_default_url(db_factory):
+    from exposurecatalyst.news.ingest import seed_feeds
+
+    with get_session_factory()() as s:
+        s.query(NewsFeed).delete()
+        s.add(NewsFeed(name="Google Threat Intelligence (Mandiant)", is_default=True, status="error",
+                       url="https://cloud.google.com/blog/topics/threat-intelligence/rss/"))
+        s.commit()
+        seed_feeds(s)
+        s.commit()
+        f = s.query(NewsFeed).filter_by(name="Google Threat Intelligence (Mandiant)").one()
+        assert f.url.startswith("https://feeds.feedburner.com/") and f.status == "never"
+        assert s.query(NewsFeed).count() == 13

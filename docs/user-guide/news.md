@@ -14,6 +14,13 @@ across outlets, and links mentioned CVEs to CVE Intelligence.
 Feed URLs change occasionally. A failing feed shows *Failing* with its error in Settings → News feeds, and
 admins can update or replace it.
 
+!!! warning "CISA advisories feed and bot protection"
+    `www.cisa.gov` is behind a CDN bot-management layer that can return **403 Access Denied** to server-side
+    clients from some networks, even with a descriptive User-Agent. This was observed from a Docker container
+    while the same request from a workstation succeeded. ExposureCatalyst does **not** attempt to evade
+    bot protection. If the feed fails from your egress IPs, ask your network team to have them allowlisted
+    with CISA/Akamai, or disable the feed. CISA **KEV** ingestion uses a different path and is unaffected.
+
 ## How stories are processed
 
 1. **Fetch** every 30 minutes (`EXCAT_NEWS_INTERVAL_MINUTES`, or per-source in Settings → CVE Sources). Uses

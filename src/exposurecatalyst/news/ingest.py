@@ -87,7 +87,7 @@ DEFAULT_FEEDS = [
     ("Cisco Talos", "https://blog.talosintelligence.com/rss/", "vendor-intel"),
     (
         "Google Threat Intelligence (Mandiant)",
-        "https://cloud.google.com/blog/topics/threat-intelligence/rss/",
+        "https://feeds.feedburner.com/threatintelligence/pvexyqv7v0v",
         "vendor-intel",
     ),
     (
@@ -99,7 +99,17 @@ DEFAULT_FEEDS = [
 ]
 
 
+# Default feed URLs that publishers retired or that return HTML; corrected on startup for existing installs.
+REPLACED_DEFAULT_URLS = {
+    "https://cloud.google.com/blog/topics/threat-intelligence/rss/": "https://feeds.feedburner.com/threatintelligence/pvexyqv7v0v",
+}
+
+
 def seed_feeds(db: Session) -> None:
+    for old, new in REPLACED_DEFAULT_URLS.items():
+        feed = db.scalar(select(NewsFeed).where(NewsFeed.url == old, NewsFeed.is_default.is_(True)))
+        if feed is not None and not db.scalar(select(NewsFeed).where(NewsFeed.url == new)):
+            feed.url, feed.status, feed.last_error, feed.etag = new, "never", None, None
     existing = set(db.scalars(select(NewsFeed.url)))
     for name, url, cat in DEFAULT_FEEDS:
         if url not in existing and not db.scalar(select(NewsFeed).where(NewsFeed.name == name)):
