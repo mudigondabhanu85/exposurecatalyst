@@ -155,6 +155,10 @@ def test_excel_branding_dedup_and_formula_injection(analyst, approver, cve):
     assert wb.sheetnames == ["Summary", "All Assets (Deduplicated)", "Qualys", "Wiz"]
     summary = wb["Summary"]
     assert len(summary._images) == 1
+    import zipfile
+
+    xlsx = zipfile.ZipFile(io.BytesIO(analyst.get(f"{base}/export/xlsx").content))
+    assert b'descr="ExposureCatalyst"' in xlsx.read("xl/drawings/drawing1.xml")
     header = summary["A4"]
     assert header.value == "Field" and header.fill.fgColor.rgb.endswith("0B1B33") and header.font.bold
     assert header.font.color.rgb.endswith("FFFFFF")

@@ -145,7 +145,22 @@ def build_workbook(adv: Advisory, cve: Cve | None) -> bytes:
     wb.properties.creator = "ExposureCatalyst"
     out = io.BytesIO()
     wb.save(out)
-    return out.getvalue()
+    return _set_logo_alt_text(out.getvalue())
+
+
+def _set_logo_alt_text(xlsx: bytes) -> bytes:
+    """openpyxl hard-codes image alt text to "Picture"; brand/accessibility require "ExposureCatalyst"."""
+    import zipfile
+
+    src, dst = zipfile.ZipFile(io.BytesIO(xlsx)), io.BytesIO()
+    with zipfile.ZipFile(dst, "w", zipfile.ZIP_DEFLATED) as z:
+        for item in src.infolist():
+            data = src.read(item.filename)
+            if item.filename.startswith("xl/drawings/drawing") and item.filename.endswith(".xml"):
+                data = data.replace(b'name="Image 1" descr="Picture"',
+                                    b'name="ExposureCatalyst logo" descr="ExposureCatalyst"')
+            z.writestr(item, data)
+    return dst.getvalue()
 
 
 def workbook_name(adv: Advisory) -> str:
