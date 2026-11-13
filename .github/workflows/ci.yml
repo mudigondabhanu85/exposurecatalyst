@@ -1,0 +1,71 @@
+name: ci
+on:
+  push: {branches: [main]}
+  pull_request:
+  release: {types: [published]}
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16.4-alpine
+        env: {POSTGRES_DB: excat, POSTGRES_USER: excat, POSTGRES_PASSWORD: ci-only-password}
+        ports: ["5432:5432"]
+        options: --health-cmd "pg_isready -U excat" --health-interval 5s --health-retries 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests migrations
+      - run: bandit -q -r src -c pyproject.toml
+      - run: pip-audit --skip-editable
+      - run: pytest --cov=exposurecatalyst --cov-report=xml
+      - name: Migrations apply cleanly on PostgreSQL (incl. audit trigger) and downgrade
+        env:
+          EXCAT_ENV: test
+          EXCAT_DATABASE_URL: postgresql+psycopg://excat:ci-only-password@localhost:5432/excat
+        run: |
+          exposurecatalyst migrate
+          python -c "import psycopg; c=psycopg.connect('postgresql://excat:ci-only-password@localhost/excat'); c.execute(\"INSERT INTO audit_log(occurred_at,action,outcome,details,prev_hash,hash) VALUES (now(),'t','success','{}','0','1')\"); c.commit()
+          try:
+              c.execute('DELETE FROM audit_log'); raise SystemExit('trigger missing')
+          except psycopg.errors.RaiseException: print('audit trigger OK')"
+          alembic downgrade base
+
+  frontend:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: {node-version: "20", cache: npm, cache-dependency-path: frontend/package-lock.json}
+      - run: npm ci && npm run build && npm audit --omit=dev --audit-level=high
+        working-directory: frontend
+
+  docs:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - run: sudo apt-get update && sudo apt-get install -y graphviz
+      - run: pip install -e ".[docs]"
+      - name: Regenerate diagrams + reference pages + strict MkDocs build (fails on broken links/diagrams)
+        env:
+          EXCAT_DOCS_VERSION: ${{ github.ref_type == 'tag' && github.ref_name || github.sha }}
+        run: python -m exposurecatalyst.docs build
+      - name: Generated files are committed (no drift)
+        run: git diff --exit-code -- docs/reference
+      - uses: actions/upload-artifact@v4
+        with: {name: docs-site, path: dist/docs/site}
+
+  image:
+    needs: [backend, frontend, docs]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t exposurecatalyst:${{ github.sha }} .

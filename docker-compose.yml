@@ -1,0 +1,53 @@
+# Local / single-node deployment. Mirrors the AWS reference architecture logically:
+# postgres ≈ Aurora PostgreSQL, api ≈ ECS API service, scheduler ≈ ECS worker+scheduler, redis ≈ ElastiCache.
+name: exposurecatalyst
+
+x-app: &app
+  image: exposurecatalyst:0.1.0
+  env_file: .env
+  environment:
+    EXCAT_DATABASE_URL: postgresql+psycopg://excat:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/excat
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+  restart: unless-stopped
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    environment:
+      POSTGRES_DB: excat
+      POSTGRES_USER: excat
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U excat -d excat"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  api:
+    <<: *app
+    build: .
+    command: ["sh", "-c", "exposurecatalyst migrate && exec exposurecatalyst serve --host 0.0.0.0 --port 8000"]
+    ports: ["127.0.0.1:8000:8000"]
+    depends_on:
+      postgres: {condition: service_healthy}
+
+  scheduler:
+    <<: *app
+    command: ["exposurecatalyst", "scheduler"]
+    healthcheck: {disable: true}
+    depends_on:
+      api: {condition: service_healthy}   # migrations have run
+
+  redis:   # optional: `docker compose --profile scale up` (Celery broker / shared rate limits)
+    image: redis:7.4-alpine
+    profiles: [scale]
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-change-me}", "--save", ""]
+    restart: unless-stopped
+
+volumes:
+  pgdata:

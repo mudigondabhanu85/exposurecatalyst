@@ -1,0 +1,64 @@
+# Tooltip text for every metric, badge and form field ("ⓘ" icons). Keys are referenced by the UI.
+cvss:
+  label: CVSS
+  text: Common Vulnerability Scoring System base score (0–10). Measures technical severity, not likelihood of attack.
+epss:
+  label: EPSS
+  text: Probability (0–100 %) that this CVE is exploited in the next 30 days, from FIRST.org. Updated daily.
+epss_percentile:
+  label: EPSS percentile
+  text: Share of all CVEs with an equal or lower EPSS score. 99th = top 1 %.
+kev:
+  label: KEV
+  text: Listed in CISA's Known Exploited Vulnerabilities catalog — there is reliable evidence of active exploitation.
+kev_due_date:
+  label: KEV due date
+  text: Remediation deadline CISA sets for US federal agencies; a sensible default SLA for everyone else.
+exploit:
+  label: Exploit available
+  text: A public exploit or proof-of-concept is referenced, or the CVE is in KEV.
+severity:
+  label: Severity
+  text: Derived from the headline CVSS score — Critical ≥ 9.0, High ≥ 7.0, Medium ≥ 4.0, Low > 0.
+cwe:
+  label: CWE
+  text: Common Weakness Enumeration — the category of software flaw (e.g. CWE-787 out-of-bounds write).
+cpe:
+  label: Affected products
+  text: Vendor/product/version ranges parsed from NVD CPE applicability statements. "≥" = from version, "<" = fixed in.
+vuln_status:
+  label: NVD status
+  text: NVD analysis status. "Awaiting Analysis" means scores and CPEs may be missing or provisional.
+provenance:
+  label: Source
+  text: Which upstream source supplied this value and when it was last updated.
+source_health:
+  label: Source health
+  text: Healthy = recent success; Degraded = stale or one failure; Failing = 3+ consecutive failures; Pending = never run.
+scheduler:
+  label: Scheduler
+  text: Background process that refreshes sources. Must be running for scheduled and "Refresh now" fetches.
+refresh_now:
+  label: Refresh now
+  text: Queue an immediate fetch from every enabled source. Picked up within one minute. Requires cve:refresh.
+interval:
+  label: Interval
+  text: Minutes between automatic refreshes for this source. Minimum 5, default 60.
+saved_search:
+  label: Saved search
+  text: Store the current filters under a name. Saved searches are private to you.
+advisory_id:
+  label: Advisory ID
+  text: Unique EXCAT-YYYY-NNNN reference stamped on each advisory, for tickets and replies.
+validated:
+  label: Validated
+  text: '"Yes" only for sources that actually found affected assets; "No" = integrated but nothing found; "Not Integrated" = no connector.'
+affected_assets:
+  label: Affected assets
+  text: Assets in your environment that integrations report as vulnerable, de-duplicated by hostname, IP and cloud resource ID.
+mfa:
+  label: MFA
+  text: Time-based one-time password (TOTP) from an authenticator app. Required for local admin accounts.
+local_account:
+  label: Local account
+  text: Signs in with a password stored in ExposureCatalyst (break-glass). SSO accounts are managed in Okta/SailPoint.

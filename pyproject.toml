@@ -1,0 +1,67 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "exposurecatalyst"
+version = "0.1.0"
+description = "ExposureCatalyst — Vulnerability Intelligence & Advisory Platform"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+license = { text = "Proprietary" }
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.30",
+  "sqlalchemy>=2.0.30,<2.1",
+  "alembic>=1.13",
+  "pydantic>=2.8,<3",
+  "pydantic-settings>=2.4",
+  "email-validator>=2.2",
+  "httpx>=0.27",
+  "apscheduler>=3.10,<4",
+  "argon2-cffi>=23.1",
+  "pyotp>=2.9",
+  "cryptography>=43",
+  "structlog>=24.4",
+  "prometheus-client>=0.20",
+  "python-frontmatter>=1.1",
+  "pyyaml>=6.0.2",
+  "psycopg[binary]>=3.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.3", "pytest-cov>=5", "ruff>=0.6", "bandit>=1.7.9", "pip-audit>=2.7"]
+docs = ["mkdocs-material>=9.5.39", "pymdown-extensions>=10.11", "diagrams>=0.23.4"]
+mysql = ["pymysql>=1.1"]
+mssql = ["pyodbc>=5.1"]
+oracle = ["oracledb>=2.4"]
+scale = ["celery>=5.4", "redis>=5.1"]
+
+[project.scripts]
+exposurecatalyst = "exposurecatalyst.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/exposurecatalyst"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+filterwarnings = ["ignore::DeprecationWarning:passlib.*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py312"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S", "SIM"]
+ignore = ["S101", "B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S", "B", "E501"]
+"migrations/**" = ["E501"]
+"docs/diagrams/**" = ["E501"]
+"src/exposurecatalyst/config.py" = ["E501"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "frontend", "migrations"]

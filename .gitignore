@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+frontend/node_modules/
+frontend/dist/
+dist/
+*.db
+.env
+.excat-dev.key
+.DS_Store
+*.tsbuildinfo
+exposurecatalyst-brand.zip
+.pytest_cache/
