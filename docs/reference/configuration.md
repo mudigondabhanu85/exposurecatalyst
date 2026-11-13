@@ -14,11 +14,13 @@ Every setting is an environment variable with the `EXCAT_` prefix (also read fro
 | `EXCAT_METRICS_ENABLED` | `bool` | `True` | Expose Prometheus metrics at /metrics (block this path at the load balancer). |
 | `EXCAT_CORS_ORIGINS` | `str` | `` | Comma-separated extra origins allowed for CORS and state-changing requests. |
 | `EXCAT_DATABASE_URL` | `SecretStr` | `sqlite:///./exposurecatalyst.db` | SQLAlchemy URL, e.g. `postgresql+psycopg://user:pass@host:5432/excat?sslmode=require`. SQLite is for development only. |
+| `EXCAT_DATABASE_PASSWORD` | `pydantic.types.SecretStr | None` | — | Database password injected separately (e.g. ECS secret from the RDS-managed secret's `password` field). When set, it is inserted into EXCAT_DATABASE_URL, which then needs no password. |
 | `EXCAT_DB_POOL_SIZE` | `int` | `10` | Connection pool size (non-SQLite). |
 | `EXCAT_DB_MAX_OVERFLOW` | `int` | `20` | Extra connections allowed above the pool size. |
 | `EXCAT_DB_POOL_RECYCLE_SECONDS` | `int` | `1800` | Recycle connections after N seconds. |
 | `EXCAT_DB_ECHO` | `bool` | `False` | Log every SQL statement (debug only — never in prod). |
 | `EXCAT_ENCRYPTION_KEY` | `pydantic.types.SecretStr | None` | — | Fernet key used to encrypt secrets at rest (TOTP seeds, connector credentials). Generate with `exposurecatalyst gen-key`. Required in prod. |
+| `EXCAT_ENCRYPTION_KEYS_PREVIOUS` | `pydantic.types.SecretStr | None` | — | Comma-separated previous Fernet keys, accepted for decryption during key rotation (see `exposurecatalyst rotate-secrets`). Remove once rotation has completed. |
 | `EXCAT_SESSION_IDLE_TIMEOUT_MINUTES` | `int` | `30` | Sign out after N minutes of inactivity. |
 | `EXCAT_SESSION_ABSOLUTE_TIMEOUT_MINUTES` | `int` | `480` | Maximum session lifetime regardless of activity. |
 | `EXCAT_COOKIE_SECURE` | `bool` | `True` | Mark session cookies Secure (HTTPS only). Must be true in prod. |
@@ -64,8 +66,13 @@ Every setting is an environment variable with the `EXCAT_` prefix (also read fro
 | `EXCAT_AI_MAX_CONTEXT_CHARS` | `int` | `24000` | Maximum untrusted context characters sent per AI request. |
 | `EXCAT_AI_ALLOW_PRIVATE_ENDPOINTS` | `bool` | `False` | Allow self-hosted AI endpoints (Ollama, vLLM, LM Studio) on private/loopback addresses. |
 | `EXCAT_AI_RATE_LIMIT_PER_USER_PER_MINUTE` | `int` | `20` | AI requests allowed per user per minute. |
+| `EXCAT_RETENTION_SESSIONS_DAYS` | `int` | `30` | Delete expired or revoked sessions older than this. |
+| `EXCAT_RETENTION_JOB_RUNS_DAYS` | `int` | `90` | Delete ingestion job-run history older than this. |
+| `EXCAT_RETENTION_AI_USAGE_DAYS` | `int` | `400` | Delete AI usage records older than this (13 months default). |
+| `EXCAT_RETENTION_ALERT_EVENTS_DAYS` | `int` | `365` | Delete delivered alert events older than this. |
 | `EXCAT_FRONTEND_DIST_DIR` | `Path` | `frontend/dist` | Built React app served at /. |
 | `EXCAT_DOCS_SITE_DIR` | `Path` | `dist/docs/site` | Built MkDocs site served at /docs. |
+| `EXCAT_DOCS_EXPORTS_DIR` | `Path` | `dist/docs/exports` | DOCX / standalone HTML guides offered in Help Center → Download documentation. |
 | `EXCAT_HELP_DIR` | `Path` | `docs/help` | In-app help Markdown (single source with docs). |
 | `EXCAT_BRAND_DIR` | `Path` | `brand` | Brand kit (logos, tokens) used in emails, exports and docs. |
 | `EXCAT_CHANGELOG_PATH` | `Path` | `CHANGELOG.md` | Changelog shown in Help Center → What's new. |

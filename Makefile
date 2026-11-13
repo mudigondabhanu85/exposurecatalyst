@@ -1,4 +1,4 @@
-.PHONY: help install migrate run scheduler test lint security frontend frontend-dev diagrams docs docker-build up down
+.PHONY: help install migrate run scheduler test lint security frontend frontend-dev diagrams docs docs-exports docker-build up down
 
 PY ?= .venv/bin/python
 BIN ?= .venv/bin
@@ -40,8 +40,11 @@ frontend-dev:    ## Vite dev server on :5173
 diagrams:        ## Render docs/diagrams/*.py → SVG / PNG@300dpi / .drawio
 	$(PY) -m exposurecatalyst.docs diagrams
 
-docs:            ## Diagrams + generated reference pages + MkDocs (strict) → dist/docs/site
+docs:            ## Diagrams + reference pages + MkDocs (strict) + DOCX/HTML guides → dist/docs/{site,exports}
 	$(PY) -m exposurecatalyst.docs build
+
+docs-exports:    ## Only the DOCX / standalone HTML guides (Pandoc locally or in Docker)
+	$(PY) -m exposurecatalyst.docs exports
 
 docker-build:    ## Build the container image
 	docker build -t exposurecatalyst:0.5.0 .

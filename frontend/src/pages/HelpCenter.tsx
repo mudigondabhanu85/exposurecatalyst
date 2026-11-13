@@ -13,6 +13,40 @@ const TABS: { id: Tab; label: string }[] = [
   { id: "shortcuts", label: "Keyboard shortcuts" }, { id: "whatsnew", label: "What's new" },
 ];
 
+interface Downloads {
+  version: string | null; date: string | null; classification: string | null;
+  guides: { id: string; title: string; description: string; files: { format: "docx" | "html"; size: number; url: string }[] }[];
+}
+const FORMAT_LABEL = { docx: "Word (.docx)", html: "Web page (.html)" } as const;
+const mb = (n: number) => `${(n / 1_048_576).toFixed(n < 1_048_576 ? 2 : 1)} MB`;
+
+function DownloadDocs() {
+  const q = useQuery({ queryKey: ["help-downloads"], queryFn: () => api<Downloads>("/api/help/downloads") });
+  if (!q.data || q.data.guides.length === 0) return null;
+  const d = q.data;
+  return (
+    <section className="card mb-4" aria-labelledby="dl-title" data-tour="help-downloads">
+      <h2 id="dl-title" className="font-heading text-lg font-bold text-ec-navy">Download documentation</h2>
+      <p className="mb-3 text-sm text-ec-slate">Branded guides for offline reading, printing or sharing inside your organization.
+        Version {d.version} · {d.date}{d.classification && <> · Classification: <strong>{d.classification}</strong></>}. You only see the guides your role can use.</p>
+      <ul className="grid gap-3 md:grid-cols-2">
+        {d.guides.map((g) => (
+          <li key={g.id} className="rounded-md border border-ec-border p-3">
+            <p className="font-medium text-ec-navy">{g.title}</p>
+            <p className="mt-1 text-sm text-ec-slate">{g.description}</p>
+            <p className="mt-2 flex flex-wrap gap-2">
+              {g.files.map((f) => (
+                <a key={f.format} className="btn-secondary" href={f.url} download
+                   aria-label={`Download ${g.title} as ${FORMAT_LABEL[f.format]}, ${mb(f.size)}`}>
+                  {FORMAT_LABEL[f.format]} · {mb(f.size)}
+                </a>))}
+            </p>
+          </li>))}
+      </ul>
+    </section>
+  );
+}
+
 function HelpDoc({ id }: { id: string }) {
   const q = useQuery({ queryKey: ["help", id], queryFn: () => api<HelpPage>(`/api/help/pages/${id}`) });
   return q.data ? <Markdown source={q.data.markdown} /> : null;
@@ -60,6 +94,8 @@ export default function HelpCenterPage() {
           </ul>
         )}
       </div>
+
+      <DownloadDocs />
 
       {aiOn && (
         <div className="mb-4"><AiBox title="Ask Help">

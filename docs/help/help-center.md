@@ -19,7 +19,9 @@ The Help Center brings together every in-app help topic. It only shows topics yo
 4. On any page, press the **?** button in the page header, or press `?` on your keyboard, to open that
    page's help.
 5. Click **Full documentation** to open the complete docs site at `/docs`.
-6. Click **Tour** in the header to replay the guided walkthrough for your role (Analyst, Approver, Admin or
+6. Under **Download documentation**, download a guide as Word (.docx) or a single-file web page (.html) for
+   offline reading or printing. You only see the guides that match your role.
+7. Click **Tour** in the header to replay the guided walkthrough for your role (Analyst, Approver, Admin or
    Viewer). It runs automatically on your first sign-in. Skip it with **Esc**, and move between steps with
    the arrow keys.
 

@@ -182,6 +182,8 @@ class Settings(BaseSettings):
     # --- Paths -------------------------------------------------------------------------------
     frontend_dist_dir: Path = Field(PROJECT_ROOT / "frontend" / "dist", description="Built React app served at /.")
     docs_site_dir: Path = Field(PROJECT_ROOT / "dist" / "docs" / "site", description="Built MkDocs site served at /docs.")
+    docs_exports_dir: Path = Field(PROJECT_ROOT / "dist" / "docs" / "exports",
+                                   description="DOCX / standalone HTML guides offered in Help Center → Download documentation.")
     help_dir: Path = Field(PROJECT_ROOT / "docs" / "help", description="In-app help Markdown (single source with docs).")
     brand_dir: Path = Field(PROJECT_ROOT / "brand", description="Brand kit (logos, tokens) used in emails, exports and docs.")
     changelog_path: Path = Field(PROJECT_ROOT / "CHANGELOG.md", description="Changelog shown in Help Center → What's new.")

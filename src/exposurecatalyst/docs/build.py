@@ -3,8 +3,10 @@
 Steps
   1. Generate reference pages from code (configuration reference, RBAC matrix) — no drift.
   2. Render every diagram in docs/diagrams/*.py → SVG (embedded icons) + 300-DPI PNG + .drawio.
-  3. Build the MkDocs Material site with --strict (broken links / missing files fail the build).
-Phase 6 adds: standalone single-file HTML and DOCX (Pandoc + reference.docx) for each audience guide.
+  3. Render Mermaid blocks (mermaid-cli) for the exports.
+  4. Build the MkDocs Material site with --strict (broken links / missing files fail the build).
+  5. Export each audience guide as DOCX (Pandoc + branded reference.docx) and standalone single-file HTML
+     → dist/docs/exports (see exposurecatalyst.docs.export).
 """
 
 from __future__ import annotations
@@ -134,6 +136,11 @@ def main(argv: list[str] | None = None) -> int:
     b.add_argument("--skip-diagrams", action="store_true", help="Use committed diagram renders")
     b.add_argument("--docker", action="store_true", help="Force diagram rendering in Docker")
     b.add_argument("--no-strict", action="store_true")
+    b.add_argument("--no-exports", action="store_true", help="Skip DOCX / standalone HTML exports")
+    ex = sub.add_parser("exports", help="Only export the DOCX / standalone HTML guides")
+    ex.add_argument("--docker", action="store_true", help="Render missing Mermaid diagrams in Docker")
+    mm = sub.add_parser("mermaid", help="Only render Mermaid diagrams for the exports")
+    mm.add_argument("--docker", action="store_true", help="Force rendering in Docker")
     sub.add_parser("generate", help="Only regenerate code-derived reference pages")
     dg = sub.add_parser("diagrams", help="Only render diagrams")
     dg.add_argument("--docker", action="store_true", help="Force rendering in Docker")
@@ -146,7 +153,13 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.cmd == "diagrams" or (args.cmd == "build" and not args.skip_diagrams):
         render_diagrams(use_docker=getattr(args, "docker", False))
+    if args.cmd == "mermaid" or (args.cmd == "build" and not args.skip_diagrams):
+        from exposurecatalyst.docs.export import render_mermaid
+        print(f"Mermaid: {render_mermaid(use_docker=getattr(args, 'docker', False))} rendered")
     if args.cmd == "build":
         site = build_site(strict=not args.no_strict)
         print(f"Docs built → {site}")
+    if args.cmd == "exports" or (args.cmd == "build" and not args.no_exports):
+        from exposurecatalyst.docs.export import export_all
+        print(f"Exports → {export_all()}")
     return 0

@@ -18,9 +18,13 @@ COPY pyproject.toml README.md ./
 COPY src ./src
 RUN pip install .
 
-# ---- 3. Documentation site (diagrams are pre-rendered and committed; CI re-renders them) ----------
-FROM python:3.12.7-slim-bookworm AS docs
-ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1
+# ---- 3. Documentation site + DOCX / standalone HTML exports ---------------------------------------
+# Diagrams and Mermaid renders are committed (CI re-renders them); Pandoc comes from its official image.
+FROM pandoc/core:3.5-ubuntu AS docs
+ENV PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 DEBIAN_FRONTEND=noninteractive
+RUN apt-get update && apt-get install -y --no-install-recommends python3 python3-venv \
+    && rm -rf /var/lib/apt/lists/* && python3 -m venv /opt/venv
+ENV PATH=/opt/venv/bin:$PATH
 WORKDIR /app
 COPY pyproject.toml README.md CHANGELOG.md mkdocs.yml ./
 COPY src ./src
@@ -42,11 +46,13 @@ COPY docs/help ./docs/help
 COPY brand/assets/png ./brand/assets/png
 COPY --from=ui /ui/frontend/dist ./frontend/dist
 COPY --from=docs /app/dist/docs/site ./dist/docs/site
+COPY --from=docs /app/dist/docs/exports ./dist/docs/exports
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \
     EXCAT_APP_ROOT=/app \
     EXCAT_FRONTEND_DIST_DIR=/app/frontend/dist \
     EXCAT_DOCS_SITE_DIR=/app/dist/docs/site \
+    EXCAT_DOCS_EXPORTS_DIR=/app/dist/docs/exports \
     EXCAT_HELP_DIR=/app/docs/help \
     EXCAT_BRAND_DIR=/app/brand \
     EXCAT_CHANGELOG_PATH=/app/CHANGELOG.md
