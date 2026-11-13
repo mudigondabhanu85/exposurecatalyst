@@ -150,6 +150,19 @@ class Settings(BaseSettings):
         60, ge=0, description="Re-use an integration's CVE results younger than this instead of calling the tool again."
     )
 
+    # --- Security News ------------------------------------------------------------------------
+    news_interval_minutes: int = Field(30, ge=5, description="Default refresh interval for news feeds.")
+    news_retention_days: int = Field(90, ge=7, description="Delete news items older than this.")
+    news_max_items_per_feed: int = Field(100, ge=10, description="Newest items processed per feed per run.")
+
+    # --- AI ------------------------------------------------------------------------------------
+    ai_timeout_seconds: float = Field(90.0, gt=0, description="Timeout for AI provider calls.")
+    ai_max_context_chars: int = Field(24_000, ge=2_000, description="Maximum untrusted context characters sent per AI request.")
+    ai_allow_private_endpoints: bool = Field(
+        False, description="Allow self-hosted AI endpoints (Ollama, vLLM, LM Studio) on private/loopback addresses."
+    )
+    ai_rate_limit_per_user_per_minute: int = Field(20, ge=1, description="AI requests allowed per user per minute.")
+
     # --- Paths -------------------------------------------------------------------------------
     frontend_dist_dir: Path = Field(PROJECT_ROOT / "frontend" / "dist", description="Built React app served at /.")
     docs_site_dir: Path = Field(PROJECT_ROOT / "dist" / "docs" / "site", description="Built MkDocs site served at /docs.")

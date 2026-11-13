@@ -59,7 +59,8 @@ def list_sources(_: Principal = Depends(require(Permission.CVE_VIEW)), db: Sessi
         s = db.get(SourceState, name)
         if s is None:
             continue
-        interval = s.interval_minutes or settings.fetch_interval_minutes
+        default = settings.news_interval_minutes if name == "news" else settings.fetch_interval_minutes
+        interval = s.interval_minutes or default
         out.append(SourceOut(source=name, label=SOURCE_LABELS[name], enabled=s.enabled, status=s.status,
                              health=_health(s, interval), interval_minutes=interval,
                              last_attempt_at=s.last_attempt_at, last_success_at=s.last_success_at,
@@ -72,7 +73,7 @@ def list_sources(_: Principal = Depends(require(Permission.CVE_VIEW)), db: Sessi
 
 
 @router.post("/refresh", status_code=202)
-def refresh(request: Request, source: str | None = Query(None, pattern="^(nvd|kev|epss)$"),
+def refresh(request: Request, source: str | None = Query(None, pattern="^(nvd|kev|epss|news)$"),
             p: Principal = Depends(require(Permission.CVE_REFRESH)), db: Session = Depends(get_db)) -> dict:
     names = [source] if source else list(SOURCE_ORDER)
     now = utcnow()

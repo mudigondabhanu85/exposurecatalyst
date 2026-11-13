@@ -16,12 +16,14 @@ from exposurecatalyst import __version__
 from exposurecatalyst.api import (
     admin,
     advisories,
+    ai,
     alerts,
     auth,
     cves,
     health,
     help,
     integrations,
+    news,
     scim,
     smtp,
     sources,
@@ -53,6 +55,9 @@ def bootstrap(settings: Settings) -> None:
         seed_roles(db)
         ensure_source_states(db)
         seed_templates(db)
+        from exposurecatalyst.news.ingest import seed_feeds
+
+        seed_feeds(db)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -93,7 +98,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     for r in (health.router, auth.router, cves.router, sources.router, help.router, admin.router,
               advisories.router, advisories.templates_router, smtp.router, integrations.router,
-              sso.router, scim.router, alerts.router):
+              sso.router, scim.router, alerts.router, news.router, ai.router):
         app.include_router(r)
 
     @app.exception_handler(scim.ScimError)

@@ -251,7 +251,7 @@ def test_run_source_records_health_and_lock(settings, db_factory):
 def test_due_sources_and_manual_refresh(settings, db_factory):
     ran = []
     factory = lambda n, s: (ran.append(n), FakeSource())[1]  # noqa: E731
-    assert tick(settings, db_factory, factory) == ["nvd", "kev", "epss"]
+    assert tick(settings, db_factory, factory) == ["nvd", "kev", "epss", "news"]
     with db_factory() as db:
         assert due_sources(db, settings) == []
         db.get(SourceState, "epss").refresh_requested_at = datetime.now(UTC)

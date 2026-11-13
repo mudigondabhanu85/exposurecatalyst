@@ -22,8 +22,8 @@ from exposurecatalyst.models import AppSetting, JobRun, SourceState
 log = structlog.get_logger(__name__)
 
 # Order matters: EPSS runs after NVD/KEV so newly created CVEs get scored in the same tick.
-SOURCE_ORDER = ("nvd", "kev", "epss")
-SOURCE_LABELS = {"nvd": "NVD API 2.0", "kev": "CISA KEV", "epss": "FIRST EPSS"}
+SOURCE_ORDER = ("nvd", "kev", "epss", "news")
+SOURCE_LABELS = {"nvd": "NVD API 2.0", "kev": "CISA KEV", "epss": "FIRST EPSS", "news": "Security news feeds"}
 HEARTBEAT_KEY = "scheduler.heartbeat"
 
 RUNS = Counter("excat_ingestion_runs_total", "Ingestion runs", ["source", "status"])
@@ -36,6 +36,10 @@ SourceFactory = Callable[[str, Settings], Source]
 
 
 def default_factory(name: str, settings: Settings) -> Source:
+    if name == "news":
+        from exposurecatalyst.news.ingest import NewsSource
+
+        return NewsSource(settings)
     return {"nvd": NvdSource, "kev": KevSource, "epss": EpssSource}[name](settings)
 
 
@@ -55,7 +59,8 @@ def due_sources(db: Session, settings: Settings) -> list[str]:
         s = states.get(name)
         if s is None or not s.enabled:
             continue
-        interval = timedelta(minutes=s.interval_minutes or settings.fetch_interval_minutes)
+        default = settings.news_interval_minutes if name == "news" else settings.fetch_interval_minutes
+        interval = timedelta(minutes=s.interval_minutes or default)
         if s.refresh_requested_at is not None or s.last_attempt_at is None or \
                 as_utc(s.last_attempt_at) + interval <= now:
             due.append(name)

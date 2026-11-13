@@ -79,7 +79,7 @@ def test_saved_searches_are_per_user(login, seeded):
 def test_sources_health_and_refresh(login):
     c = login("Security Analyst")
     body = c.get("/api/sources").json()
-    assert [s["source"] for s in body["sources"]] == ["nvd", "kev", "epss"]
+    assert [s["source"] for s in body["sources"]] == ["nvd", "kev", "epss", "news"]
     assert body["scheduler_alive"] is False
     assert all(s["health"] == "pending" for s in body["sources"])
     assert c.post("/api/sources/refresh", params={"source": "kev"}).json()["queued"] == ["kev"]
