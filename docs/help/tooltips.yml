@@ -62,3 +62,9 @@ mfa:
 local_account:
   label: Local account
   text: Signs in with a password stored in ExposureCatalyst (break-glass). SSO accounts are managed in Okta/SailPoint.
+advisory_status:
+  label: Advisory status
+  text: Draft (editable) → In review (locked) → Approved (can be sent/exported) → Sent. Cancelled advisories are kept for audit.
+manual_entry:
+  label: Manual
+  text: Entered or uploaded by an analyst rather than pulled from an integration. Labelled "Manual" in the email and Excel.

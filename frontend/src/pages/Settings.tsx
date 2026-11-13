@@ -17,7 +17,7 @@ const SUBTABS: { to: string; label: string; perm: string; phase?: number }[] = [
   { to: "rbac", label: "Users & RBAC", perm: "user:manage" },
   { to: "database", label: "Database", perm: "settings:manage", phase: 6 },
   { to: "integrations", label: "Integrations", perm: "integration:manage", phase: 3 },
-  { to: "smtp", label: "SMTP", perm: "settings:manage", phase: 2 },
+  { to: "smtp", label: "SMTP", perm: "settings:manage" },
   { to: "sources", label: "CVE Sources", perm: "source:manage" },
   { to: "alerts", label: "Alerts & Scheduling", perm: "settings:manage", phase: 4 },
   { to: "ai", label: "AI Providers", perm: "ai:manage", phase: 5 },
@@ -44,6 +44,7 @@ export default function SettingsPage() {
           <Route index element={visible[0] ? <Navigate to={visible.find((t) => !t.phase)?.to ?? visible[0].to} replace /> : <EmptyState title="No settings available" why="Your role does not include any administrative permissions." />} />
           <Route path="sources" element={can("source:manage") ? <SourcesSettings /> : <Forbidden />} />
           <Route path="rbac" element={can("user:manage") ? <RbacSettings /> : <Forbidden />} />
+          <Route path="smtp" element={can("settings:manage") ? <SmtpSettings /> : <Forbidden />} />
           {SUBTABS.filter((t) => t.phase).map((t) => (
             <Route key={t.to} path={t.to} element={can(t.perm) ? (
               <><PageHeader title={t.label} helpId="help-center" /><EmptyState title={`${t.label} arrives in Phase ${t.phase}`} why="This settings area is part of the delivery plan and will include a step-by-step setup wizard with Test validation at each step." /></>
@@ -200,6 +201,51 @@ function RbacSettings() {
         </table>
       </div>
       {can("role:manage") && <p className="mt-2 text-xs text-ec-slate">* custom role. Custom role editing UI ships with Phase 4; the API (<code>POST/PUT /api/admin/roles</code>) is available now.</p>}
+    </>
+  );
+}
+
+interface SmtpCfg { configured: boolean; host?: string; port?: number; security?: string; username?: string | null; has_password?: boolean; from_address?: string; from_name?: string | null; reply_to?: string | null }
+
+function SmtpSettings() {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["smtp"], queryFn: () => api<SmtpCfg>("/api/settings/smtp") });
+  const [msg, setMsg] = useState<string | null>(null);
+  const save = useMutation({ mutationFn: (body: Record<string, unknown>) => api<SmtpCfg>("/api/settings/smtp", { method: "PUT", body }),
+                             onSuccess: (d) => { qc.setQueryData(["smtp"], d); setMsg("Saved."); } });
+  const test = useMutation({ mutationFn: (to: string) => api("/api/settings/smtp/test", { method: "POST", body: { to } }), onSuccess: () => setMsg("Test email sent.") });
+  const c = q.data;
+  if (!c) return null;
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const body: Record<string, unknown> = { host: fd.get("host"), port: Number(fd.get("port")), security: fd.get("security"),
+      username: fd.get("username") || null, from_address: fd.get("from_address"), from_name: fd.get("from_name") || null, reply_to: fd.get("reply_to") || null };
+    if (fd.get("password")) body.password = fd.get("password");
+    save.mutate(body);
+  };
+  return (
+    <>
+      <PageHeader title="SMTP" helpId="settings-smtp" subtitle="Outbound relay for advisory emails (Microsoft 365, Amazon SES or a corporate relay)" />
+      {msg && <p role="status" className="mb-3 rounded-sm bg-ec-surface-alt px-3 py-2 text-sm">{msg}</p>}
+      <ErrorNote error={save.error ?? test.error} />
+      <form onSubmit={submit} className="card mb-4 grid gap-3 md:grid-cols-3" key={String(c.host)}>
+        <div><label className="label" htmlFor="h">Host</label><input id="h" name="host" className="input w-full" defaultValue={c.host ?? ""} placeholder="smtp.office365.com" required /></div>
+        <div><label className="label" htmlFor="pt">Port</label><input id="pt" name="port" type="number" className="input w-full" defaultValue={c.port ?? 587} required /></div>
+        <div><label className="label" htmlFor="sec">Security</label><select id="sec" name="security" className="input w-full" defaultValue={c.security ?? "starttls"}><option value="starttls">STARTTLS (587)</option><option value="ssl">SSL/TLS (465)</option><option value="none">None (dev only)</option></select></div>
+        <div><label className="label" htmlFor="un">Username</label><input id="un" name="username" className="input w-full" defaultValue={c.username ?? ""} autoComplete="off" /></div>
+        <div><label className="label" htmlFor="pw">Password</label><input id="pw" name="password" type="password" className="input w-full" autoComplete="new-password" placeholder={c.has_password ? "•••••• (stored — leave blank to keep)" : ""} /></div>
+        <div><label className="label" htmlFor="fa">From address</label><input id="fa" name="from_address" type="email" className="input w-full" defaultValue={c.from_address ?? ""} required /></div>
+        <div><label className="label" htmlFor="fn">From name</label><input id="fn" name="from_name" className="input w-full" defaultValue={c.from_name ?? "ExposureCatalyst"} /></div>
+        <div><label className="label" htmlFor="rt">Reply-To</label><input id="rt" name="reply_to" type="email" className="input w-full" defaultValue={c.reply_to ?? ""} /></div>
+        <div className="flex items-end"><button className="btn-primary">Save</button></div>
+      </form>
+      {c.configured && (
+        <form className="card flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); test.mutate(String(new FormData(e.currentTarget).get("to"))); }}>
+          <div><label className="label" htmlFor="tt">Send a test email to</label><input id="tt" name="to" type="email" className="input w-72" required /></div>
+          <button className="btn-secondary" disabled={test.isPending}>{test.isPending ? "Sending…" : "Send test"}</button>
+        </form>
+      )}
     </>
   );
 }

@@ -86,3 +86,33 @@ export type Tooltips = Record<string, { label: string; text: string }>;
 export const fmtDate = (s: string | null | undefined) => (s ? s.slice(0, 10) : "—");
 export const fmtDateTime = (s: string | null | undefined) => (s ? s.replace("T", " ").slice(0, 16) + " UTC" : "—");
 export const pct = (n: number | null | undefined, digits = 1) => (n === null || n === undefined ? "—" : `${(n * 100).toFixed(digits)} %`);
+
+// ---- Phase 2: advisories ------------------------------------------------------------------------
+export interface MatrixRow { source: string; validated: "Yes" | "No" | "Not Integrated"; asset_count: number; last_checked: string | null; manual: boolean; manual_count: number | null }
+export interface AdvisoryAsset {
+  id: number; source: string; hostname: string | null; ip_address: string | null; os: string | null; cloud_account: string | null;
+  resource_id: string | null; owner: string | null; business_unit: string | null; environment: string | null;
+  detection_date: string | null; source_ref: string | null; is_manual: boolean;
+}
+export interface Advisory {
+  id: number; advisory_id: string; cve_id: string; status: "draft" | "in_review" | "approved" | "sent" | "cancelled";
+  template_id: number; template_name: string; template_version: number; subject: string; severity: string; title: string | null;
+  summary: string | null; business_impact: string | null; remediation: string | null; workaround: string | null;
+  affected_products: string | null; owner_contact: string | null; sla_due_date: string | null;
+  to_addrs: string[]; cc_addrs: string[]; bcc_addrs: string[]; created_by: string | null; created_at: string; updated_at: string;
+  approved_by: string | null; approved_at: string | null; review_comment: string | null; sent_at: string | null;
+  matrix: MatrixRow[]; total_unique_assets: number; assets: AdvisoryAsset[];
+}
+export interface AdvisorySummary { id: number; advisory_id: string; cve_id: string; status: string; severity: string; subject: string; created_by: string | null; updated_at: string; sent_at: string | null }
+export interface TemplateVersion { id: number; version: number; status: string; subject_template: string; body_template: string; change_note: string | null; created_by: string | null; created_at: string; approved_by: string | null; approved_at: string | null }
+export interface Template { id: number; name: string; kind: string; description: string | null; is_system: boolean; versions: TemplateVersion[] }
+export interface DistList { id: number; name: string; description: string | null; to_addrs: string[]; cc_addrs: string[]; bcc_addrs: string[] }
+
+/** Multipart upload (CSRF header included); the JSON helper above is for everything else. */
+export async function upload<T>(path: string, form: FormData): Promise<T> {
+  const m = document.cookie.match(/(?:^|;\s*)(?:__Host-)?excat_csrf=([^;]+)/);
+  const res = await fetch(path, { method: "POST", body: form, credentials: "same-origin", headers: { "X-CSRF-Token": m ? decodeURIComponent(m[1]) : "" } });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new ApiError(res.status, (data as { detail?: unknown }).detail ?? `HTTP ${res.status}`);
+  return data as T;
+}

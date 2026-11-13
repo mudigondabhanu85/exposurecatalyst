@@ -9,14 +9,18 @@ import CveListPage from "./pages/CveList";
 import CveDetailPage from "./pages/CveDetail";
 import SettingsPage from "./pages/Settings";
 import HelpCenterPage from "./pages/HelpCenter";
-import { AdvisoriesPage, NewsPage } from "./pages/Placeholders";
+import { NewsPage } from "./pages/Placeholders";
+import AdvisoriesRoutes from "./pages/Advisories";
 import { LoadingScreen, NotFound } from "./components/StatusScreen";
 
 /** Route → help topic, used by the global "?" shortcut. */
 export function helpIdFor(path: string): string {
   if (/^\/cves\/.+/.test(path)) return "cve-detail";
   if (path.startsWith("/cves")) return "cve-intelligence";
+  if (path.startsWith("/advisories/templates")) return "advisory-templates";
+  if (/^\/advisories\/\d+/.test(path)) return "advisory-editor";
   if (path.startsWith("/advisories")) return "advisories";
+  if (path.startsWith("/settings/smtp")) return "settings-smtp";
   if (path.startsWith("/news")) return "news";
   if (path.startsWith("/settings/rbac")) return "settings-rbac";
   if (path.startsWith("/settings")) return "settings-sources";
@@ -70,7 +74,7 @@ function Shell() {
           </Link>
           <nav aria-label="Main" className="flex flex-wrap gap-1">
             {can("cve:view") && <NavLink to="/cves" className={tab}>CVE Intelligence</NavLink>}
-            {can("cve:view") && <NavLink to="/advisories" className={tab}>Advisories</NavLink>}
+            {["advisory:create", "advisory:approve", "advisory:send", "advisory:export", "template:manage"].some(can) && <NavLink to="/advisories" className={tab}>Advisories</NavLink>}
             {can("news:view") && <NavLink to="/news" className={tab}>Security News</NavLink>}
             {SETTINGS_PERMS.some(can) && <NavLink to="/settings" className={tab}>Settings</NavLink>}
             <NavLink to="/help" className={tab}>Help Center</NavLink>
@@ -86,7 +90,7 @@ function Shell() {
           <Route path="/" element={<Navigate to="/cves" replace />} />
           <Route path="/cves" element={<CveListPage />} />
           <Route path="/cves/:cveId" element={<CveDetailPage />} />
-          <Route path="/advisories/*" element={<AdvisoriesPage />} />
+          <Route path="/advisories/*" element={<AdvisoriesRoutes />} />
           <Route path="/news" element={<NewsPage />} />
           <Route path="/settings/*" element={<SettingsPage />} />
           <Route path="/help" element={<HelpCenterPage />} />
