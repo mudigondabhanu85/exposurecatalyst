@@ -71,5 +71,16 @@ def require(*perms: Permission) -> Callable[..., Principal]:
     return checker
 
 
+def require_any(*perms: Permission) -> Callable[..., Principal]:
+    """Dependency factory: the caller must hold *at least one* of the listed permissions."""
+
+    def checker(principal: Principal = Depends(current_principal)) -> Principal:
+        if not any(p in principal.permissions for p in perms):
+            raise HTTPException(status.HTTP_403_FORBIDDEN, f"Requires one of: {', '.join(perms)}")
+        return principal
+
+    return checker
+
+
 def client_ip(request: Request) -> str | None:
     return request.client.host if request.client else None

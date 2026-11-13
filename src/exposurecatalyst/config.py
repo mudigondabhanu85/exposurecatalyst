@@ -123,10 +123,29 @@ class Settings(BaseSettings):
     )
     ssrf_resolve_dns: bool = Field(True, description="Resolve hostnames and block private results (DNS rebinding guard).")
 
+    # --- Advisories & email ---------------------------------------------------------------
+    advisory_sources: str = Field(
+        "Qualys,Tanium,Wiz,Zafran,ArmorCode,ServiceNow CMDB",
+        description="Rows shown in every advisory's asset validation matrix (comma-separated, in order).",
+    )
+    upload_max_bytes: int = Field(5_242_880, ge=10_240, description="Maximum size of a CSV/XLSX asset upload (bytes).")
+    upload_max_rows: int = Field(10_000, ge=10, description="Maximum rows imported from one asset upload.")
+    smtp_allowed_ports: str = Field("25,465,587,2525", description="Ports an admin may configure for the SMTP relay.")
+    smtp_allow_private_hosts: bool = Field(
+        False,
+        description="Allow an SMTP relay on a private/internal address (common for corporate relays). Cloud "
+        "metadata addresses are always blocked.",
+    )
+    smtp_allow_plaintext: bool = Field(
+        False, description="Allow SMTP without TLS. Development only (e.g. a local Mailpit); never in prod."
+    )
+    smtp_timeout_seconds: float = Field(30.0, gt=0, description="SMTP connect/send timeout.")
+
     # --- Paths -------------------------------------------------------------------------------
     frontend_dist_dir: Path = Field(PROJECT_ROOT / "frontend" / "dist", description="Built React app served at /.")
     docs_site_dir: Path = Field(PROJECT_ROOT / "dist" / "docs" / "site", description="Built MkDocs site served at /docs.")
     help_dir: Path = Field(PROJECT_ROOT / "docs" / "help", description="In-app help Markdown (single source with docs).")
+    brand_dir: Path = Field(PROJECT_ROOT / "brand", description="Brand kit (logos, tokens) used in emails, exports and docs.")
     changelog_path: Path = Field(PROJECT_ROOT / "CHANGELOG.md", description="Changelog shown in Help Center → What's new.")
 
     # ---------------------------------------------------------------------------------------
@@ -142,6 +161,14 @@ class Settings(BaseSettings):
     @property
     def egress_allowlist_list(self) -> list[str]:
         return [h.lower() for h in _csv(self.egress_allowlist)]
+
+    @property
+    def advisory_source_list(self) -> list[str]:
+        return _csv(self.advisory_sources)
+
+    @property
+    def smtp_port_list(self) -> list[int]:
+        return [int(p) for p in _csv(self.smtp_allowed_ports)]
 
     @property
     def cvss_version_order(self) -> list[str]:
@@ -161,6 +188,8 @@ class Settings(BaseSettings):
                 problems.append("EXCAT_COOKIE_SECURE must be true")
             if self.is_sqlite:
                 problems.append("SQLite is not supported in prod; set EXCAT_DATABASE_URL")
+            if self.smtp_allow_plaintext:
+                problems.append("EXCAT_SMTP_ALLOW_PLAINTEXT must be false")
             if self.db_echo:
                 problems.append("EXCAT_DB_ECHO must be false")
             if problems:

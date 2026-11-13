@@ -13,7 +13,7 @@ from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import inspect
 
 from exposurecatalyst import __version__
-from exposurecatalyst.api import admin, auth, cves, health, help, sources
+from exposurecatalyst.api import admin, advisories, auth, cves, health, help, smtp, sources
 from exposurecatalyst.config import Settings, get_settings
 from exposurecatalyst.db.session import get_engine, get_session_factory, init_engine, session_scope
 from exposurecatalyst.ingestion.service import ensure_source_states
@@ -34,9 +34,12 @@ def bootstrap(settings: Settings) -> None:
     if not inspect(get_engine()).has_table("roles"):
         log.warning("schema_missing", hint="run `exposurecatalyst migrate`")
         return
+    from exposurecatalyst.advisories.seed import seed_templates
+
     with session_scope() as db:
         seed_roles(db)
         ensure_source_states(db)
+        seed_templates(db)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -75,7 +78,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
                            allow_headers=["Content-Type", "X-CSRF-Token"])
 
-    for r in (health.router, auth.router, cves.router, sources.router, help.router, admin.router):
+    for r in (health.router, auth.router, cves.router, sources.router, help.router, admin.router,
+              advisories.router, advisories.templates_router, smtp.router):
         app.include_router(r)
 
     @app.exception_handler(Exception)

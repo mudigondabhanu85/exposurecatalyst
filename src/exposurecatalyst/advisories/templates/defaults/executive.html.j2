@@ -1,0 +1,4 @@
+<p style="margin:8px 0 12px 0;"><strong>Executive summary.</strong> {{ advisory.cve_id }} ({{ advisory.severity | lower }} severity{% if cve.kev_listed %}, actively exploited per CISA{% endif %}) affects <strong>{{ exposure.total_unique }}</strong> of our assets. Remediation is due by <strong>{{ advisory.sla_due_date or "TBD" }}</strong>.</p>
+{{ components.section("Business impact", advisory.business_impact) }}
+{{ components.section("What we are doing", advisory.remediation) }}
+{{ components.validation_matrix }}

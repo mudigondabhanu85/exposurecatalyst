@@ -38,6 +38,7 @@ WORKDIR /app
 COPY alembic.ini CHANGELOG.md ./
 COPY migrations ./migrations
 COPY docs/help ./docs/help
+COPY brand/assets/png ./brand/assets/png
 COPY --from=ui /ui/frontend/dist ./frontend/dist
 COPY --from=docs /app/dist/docs/site ./dist/docs/site
 ENV PATH=/opt/venv/bin:$PATH \
@@ -46,6 +47,7 @@ ENV PATH=/opt/venv/bin:$PATH \
     EXCAT_FRONTEND_DIST_DIR=/app/frontend/dist \
     EXCAT_DOCS_SITE_DIR=/app/dist/docs/site \
     EXCAT_HELP_DIR=/app/docs/help \
+    EXCAT_BRAND_DIR=/app/brand \
     EXCAT_CHANGELOG_PATH=/app/CHANGELOG.md
 USER 10001
 EXPOSE 8000

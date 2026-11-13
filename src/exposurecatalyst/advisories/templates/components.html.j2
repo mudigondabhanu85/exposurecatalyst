@@ -1,0 +1,44 @@
+{#- Building blocks exposed to template bodies as {{ components.* }}. Inline-styled for Outlook. -#}
+{%- set F = "font-family:Inter,Arial,Helvetica,sans-serif;" -%}
+{%- set H2 = "margin:20px 0 8px 0;font-family:'Space Grotesk',Arial,Helvetica,sans-serif;font-size:16px;line-height:22px;font-weight:bold;color:#0B1B33;" -%}
+{%- set TH = F ~ "padding:7px 10px;background-color:#0B1B33;color:#FFFFFF;font-size:12px;font-weight:bold;text-align:left;border:1px solid #0B1B33;" -%}
+{%- set TD = F ~ "padding:7px 10px;font-size:13px;color:#0B1B33;border:1px solid #D5DBE4;vertical-align:top;" -%}
+{%- set TDL = TD ~ "background-color:#EEF1F5;font-weight:bold;width:190px;" -%}
+
+{%- macro summary_table() -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:12px 0;">
+<tr><td style="{{ TDL }}">Severity</td><td style="{{ TD }}"><strong>{{ advisory.severity }}</strong></td></tr>
+<tr><td style="{{ TDL }}">CVSS</td><td style="{{ TD }}">{{ cve.cvss }}</td></tr>
+<tr><td style="{{ TDL }}">EPSS (exploit probability)</td><td style="{{ TD }}">{{ cve.epss }}</td></tr>
+<tr><td style="{{ TDL }}">CISA KEV</td><td style="{{ TD }}">{{ cve.kev }}</td></tr>
+<tr><td style="{{ TDL }}">Exploit status</td><td style="{{ TD }}">{{ cve.exploit }}</td></tr>
+<tr><td style="{{ TDL }}">Affected products</td><td style="{{ TD }}">{{ advisory.affected_products or "See references" }}</td></tr>
+<tr><td style="{{ TDL }}">Affected assets (unique)</td><td style="{{ TD }}"><strong>{{ exposure.total_unique }}</strong></td></tr>
+<tr><td style="{{ TDL }}">Remediation due (SLA)</td><td style="{{ TD }}"><strong>{{ advisory.sla_due_date or "—" }}</strong></td></tr>
+<tr><td style="{{ TDL }}">Owner / contact</td><td style="{{ TD }}">{{ advisory.owner_contact or "Security Operations" }}</td></tr>
+</table>
+{%- endmacro -%}
+
+{%- macro section(title, text) -%}
+{%- if text %}
+<h2 style="{{ H2 }}">{{ title }}</h2>
+<p style="margin:0 0 10px 0;{{ F }}font-size:14px;line-height:21px;color:#0B1B33;">{{ text | nl2br }}</p>
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro validation_matrix() -%}
+<h2 style="{{ H2 }}">Asset validation matrix</h2>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:4px 0 6px 0;">
+<tr><th style="{{ TH }}">Source</th><th style="{{ TH }}">Validated</th><th style="{{ TH }}text-align:right;">Affected assets</th><th style="{{ TH }}">Last checked</th></tr>
+{%- for r in exposure.rows %}
+<tr>
+<td style="{{ TD }}">{{ r.source }}{% if r.manual %} <span style="font-size:11px;color:#4A5568;">(Manual)</span>{% endif %}</td>
+<td style="{{ TD }}{% if r.validated == 'Yes' %}font-weight:bold;{% else %}color:#4A5568;{% endif %}">{{ r.validated }}</td>
+<td style="{{ TD }}text-align:right;">{% if r.validated == 'Not Integrated' %}—{% else %}{{ r.asset_count }}{% endif %}</td>
+<td style="{{ TD }}">{{ r.last_checked or "—" }}</td>
+</tr>
+{%- endfor %}
+<tr><td colspan="2" style="{{ TDL }}">Total unique affected assets</td><td style="{{ TD }}text-align:right;font-weight:bold;">{{ exposure.total_unique }}</td><td style="{{ TD }}font-size:11px;color:#4A5568;">De-duplicated by hostname / IP / cloud resource ID{% if exposure.manual_uncounted %}; includes {{ exposure.manual_uncounted }} manually counted{% endif %}</td></tr>
+</table>
+<p style="margin:0 0 10px 0;{{ F }}font-size:11px;color:#4A5568;">"Yes" only where affected assets were identified. Full asset list attached as Excel.</p>
+{%- endmacro -%}
