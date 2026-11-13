@@ -41,18 +41,18 @@ export default function HelpCenterPage() {
             {results.data.length === 0 && <li className="py-2 text-sm text-slate-500">No matching topics.</li>}
             {results.data.map((r) => (
               <li key={r.id} className="py-2">
-                <button className="text-left text-sm font-medium text-brand-600 underline" onClick={() => openHelp(r.id)}>{r.title}</button>
-                <p className="text-xs text-slate-600">…{r.snippet}…</p>
+                <button className="text-left text-sm font-medium link" onClick={() => openHelp(r.id)}>{r.title}</button>
+                <p className="text-xs text-ec-slate">…{r.snippet}…</p>
               </li>
             ))}
           </ul>
         )}
       </div>
 
-      <div role="tablist" aria-label="Help sections" className="mb-4 flex flex-wrap gap-1 border-b border-slate-200">
+      <div role="tablist" aria-label="Help sections" className="mb-4 flex flex-wrap gap-1 border-b border-ec-border">
         {TABS.map((t) => (
           <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)}
-                  className={`-mb-px border-b-2 px-3 py-2 text-sm ${tab === t.id ? "border-brand-600 font-semibold text-brand-700" : "border-transparent text-slate-600 hover:text-slate-900"}`}>
+                  className={`-mb-px border-b-2 px-3 py-2 text-sm ${tab === t.id ? "border-ec-orange font-semibold text-ec-navy" : "border-transparent text-ec-slate hover:text-ec-navy"}`}>
             {t.label}
           </button>
         ))}
@@ -62,9 +62,9 @@ export default function HelpCenterPage() {
         {tab === "topics" && (
           <ul className="grid gap-3 md:grid-cols-2">
             {pages.map((t) => (
-              <li key={t.id} className="rounded-md border border-slate-200 p-3">
-                <button className="text-left font-medium text-brand-600 underline" onClick={() => openHelp(t.id)}>{t.title}</button>
-                <p className="mt-1 text-sm text-slate-600">{t.summary}</p>
+              <li key={t.id} className="rounded-md border border-ec-border p-3">
+                <button className="text-left font-medium link" onClick={() => openHelp(t.id)}>{t.title}</button>
+                <p className="mt-1 text-sm text-ec-slate">{t.summary}</p>
               </li>
             ))}
           </ul>
@@ -77,9 +77,9 @@ export default function HelpCenterPage() {
 
       <section className="card mt-4">
         <h2 className="mb-1 font-semibold">Download documentation</h2>
-        <p className="text-sm text-slate-600">
+        <p className="text-sm text-ec-slate">
           DOCX and standalone HTML exports of the full guide and the audience-specific guides (User, Admin, Security &amp; Architecture) are produced by the documentation pipeline in Phase 6.
-          Until then, use the <a className="text-brand-600 underline" href="/docs/" target="_blank" rel="noopener noreferrer">online documentation</a>.
+          Until then, use the <a className="link" href="/docs/" target="_blank" rel="noopener noreferrer">online documentation</a>.
         </p>
       </section>
     </>

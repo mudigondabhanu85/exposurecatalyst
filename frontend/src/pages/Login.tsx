@@ -37,10 +37,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-brand-900 px-4">
+    <div className="flex min-h-screen items-center justify-center bg-ec-navy px-4">
       <form onSubmit={submit} className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" aria-labelledby="login-title">
-        <h1 id="login-title" className="text-xl font-bold text-slate-900">ExposureCatalyst</h1>
-        <p className="mb-5 text-sm text-slate-600">Vulnerability Intelligence &amp; Advisory Platform</p>
+        <h1 id="login-title" className="text-xl font-bold text-ec-navy">ExposureCatalyst</h1>
+        <p className="mb-5 text-sm text-ec-slate">Vulnerability Intelligence &amp; Advisory Platform</p>
         <button type="button" disabled className="btn-secondary mb-4 w-full justify-center" title="Okta SAML sign-in arrives in Phase 4">
           Sign in with Okta (coming soon)
         </button>

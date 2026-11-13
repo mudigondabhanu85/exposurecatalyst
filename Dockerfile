@@ -1,7 +1,8 @@
 # syntax=docker/dockerfile:1.7
 # ---- 1. Frontend -------------------------------------------------------------------------------
 FROM node:20.18.0-alpine3.20 AS ui
-WORKDIR /ui
+WORKDIR /ui/frontend
+COPY brand /ui/brand
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY frontend/ ./
@@ -37,7 +38,7 @@ WORKDIR /app
 COPY alembic.ini CHANGELOG.md ./
 COPY migrations ./migrations
 COPY docs/help ./docs/help
-COPY --from=ui /ui/dist ./frontend/dist
+COPY --from=ui /ui/frontend/dist ./frontend/dist
 COPY --from=docs /app/dist/docs/site ./dist/docs/site
 ENV PATH=/opt/venv/bin:$PATH \
     PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 \

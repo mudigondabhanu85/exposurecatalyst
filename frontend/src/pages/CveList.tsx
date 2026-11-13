@@ -156,9 +156,9 @@ export default function CveListPage() {
         )
       ) : (
         <div className="card overflow-x-auto p-0">
-          <table className="min-w-full divide-y divide-slate-200">
+          <table className="min-w-full divide-y divide-ec-border">
             <caption className="sr-only">CVE results</caption>
-            <thead className="bg-slate-50">
+            <thead className="bg-ec-surface-alt">
               <tr>
                 <th className="th" aria-sort={ariaSort("cve_id")}><button onClick={() => sortBy("cve_id")}>CVE ID{sortMark("cve_id")}</button></th>
                 <th className="th">Title / vendors</th>
@@ -172,8 +172,8 @@ export default function CveListPage() {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {data?.items.map((c) => (
-                <tr key={c.cve_id} className="hover:bg-slate-50">
-                  <td className="td whitespace-nowrap font-mono"><Link className="text-brand-600 underline" to={`/cves/${c.cve_id}`}>{c.cve_id}</Link></td>
+                <tr key={c.cve_id} className="hover:bg-ec-surface-alt">
+                  <td className="td whitespace-nowrap font-mono"><Link className="link" to={`/cves/${c.cve_id}`}>{c.cve_id}</Link></td>
                   <td className="td max-w-md"><div className="line-clamp-2">{c.title ?? "—"}</div><div className="text-xs text-slate-500">{c.vendors.join(", ")}</div></td>
                   <td className="td"><SeverityBadge severity={c.severity} /></td>
                   <td className="td whitespace-nowrap">{c.cvss_score?.toFixed(1) ?? "—"} <span className="text-xs text-slate-500">{c.cvss_version ? `v${c.cvss_version}` : ""}</span></td>
@@ -186,7 +186,7 @@ export default function CveListPage() {
             </tbody>
           </table>
           {data && (
-            <nav aria-label="Pagination" className="flex items-center justify-between border-t border-slate-200 px-4 py-2 text-sm">
+            <nav aria-label="Pagination" className="flex items-center justify-between border-t border-ec-border px-4 py-2 text-sm">
               <span>{data.total.toLocaleString()} CVEs · page {page} of {pages}</span>
               <span className="flex gap-2">
                 <button className="btn-secondary" disabled={page <= 1} onClick={() => goPage(page - 1)}>Previous</button>

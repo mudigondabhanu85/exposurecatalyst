@@ -39,8 +39,8 @@ export function PageHeader({ title, helpId, subtitle, actions }: { title: string
   return (
     <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="text-2xl font-semibold text-slate-900">{title}</h1>
-        {subtitle && <p className="mt-0.5 text-sm text-slate-600">{subtitle}</p>}
+        <h1 className="text-2xl font-semibold text-ec-navy">{title}</h1>
+        {subtitle && <p className="mt-0.5 text-sm text-ec-slate">{subtitle}</p>}
       </div>
       <div className="flex items-center gap-2">{actions}<HelpButton id={helpId} /></div>
     </div>
@@ -49,9 +49,9 @@ export function PageHeader({ title, helpId, subtitle, actions }: { title: string
 
 export function EmptyState({ title, why, fix }: { title: string; why: string; fix?: { label: string; to: string } }) {
   return (
-    <div className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
+    <div className="rounded-lg border border-dashed border-ec-border bg-white p-8 text-center">
       <p className="text-base font-semibold text-slate-800">{title}</p>
-      <p className="mx-auto mt-1 max-w-xl text-sm text-slate-600">{why}</p>
+      <p className="mx-auto mt-1 max-w-xl text-sm text-ec-slate">{why}</p>
       {fix && <Link className="btn-primary mt-4" to={fix.to}>{fix.label}</Link>}
     </div>
   );

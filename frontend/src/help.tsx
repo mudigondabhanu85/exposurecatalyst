@@ -55,7 +55,7 @@ function HelpDrawer({ id, onClose }: { id: string; onClose: () => void }) {
       <div className="absolute inset-0 bg-slate-900/30" aria-hidden="true" onClick={onClose} />
       <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
            className="relative z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-xl focus:outline-none">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-3">
+        <div className="flex items-center justify-between border-b border-ec-border px-5 py-3">
           <h2 id={titleId} className="text-lg font-semibold">{q.data?.title ?? "Help"}</h2>
           <button className="btn-secondary" onClick={onClose} aria-label="Close help">✕</button>
         </div>
@@ -64,14 +64,14 @@ function HelpDrawer({ id, onClose }: { id: string; onClose: () => void }) {
           {q.isError && <p className="text-sm text-red-700">This help topic is unavailable for your role.</p>}
           {q.data && (
             <>
-              {q.data.summary && <p className="mb-3 text-sm text-slate-600">{q.data.summary}</p>}
+              {q.data.summary && <p className="mb-3 text-sm text-ec-slate">{q.data.summary}</p>}
               <Markdown source={q.data.markdown} />
             </>
           )}
         </div>
-        <div className="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-sm">
-          <a className="text-brand-600 underline" href="/help">Help Center</a>
-          {q.data?.docs && <a className="text-brand-600 underline" href={`/docs/${q.data.docs}`} target="_blank" rel="noopener noreferrer">Learn more in the documentation ↗</a>}
+        <div className="flex items-center justify-between border-t border-ec-border px-5 py-3 text-sm">
+          <a className="link" href="/help">Help Center</a>
+          {q.data?.docs && <a className="link" href={`/docs/${q.data.docs}`} target="_blank" rel="noopener noreferrer">Learn more in the documentation ↗</a>}
         </div>
       </div>
     </div>
@@ -82,7 +82,7 @@ export function HelpButton({ id }: { id: string }) {
   const { openHelp } = useHelp();
   return (
     <button type="button" onClick={() => openHelp(id)} aria-label="Open help for this page" title="Help (?)"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 bg-white text-sm font-bold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-ec-border bg-white text-sm font-bold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ec-orange">
       ?
     </button>
   );
@@ -107,7 +107,7 @@ export function InfoTip({ k, text }: { k?: string; text?: string }) {
       <button type="button" aria-label={`About ${tip?.label ?? "this field"}`} aria-describedby={open ? id : undefined}
               onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
               onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-              className="rounded-full text-xs leading-none text-slate-400 hover:text-brand-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600">
+              className="rounded-full text-xs leading-none text-slate-400 hover:text-ec-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-ec-orange">
         ⓘ
       </button>
       {open && (

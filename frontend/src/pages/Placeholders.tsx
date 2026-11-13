@@ -9,7 +9,7 @@ export function AdvisoriesPage() {
       <PageHeader title="Advisory Email Generator" helpId="advisories" subtitle="Build, review and send stakeholder advisories" />
       {cve && (
         <p className="card mb-4 text-sm">
-          Pre-selected CVE: <Link className="font-mono text-brand-600 underline" to={`/cves/${encodeURIComponent(cve)}`}>{cve}</Link>
+          Pre-selected CVE: <Link className="font-mono link" to={`/cves/${encodeURIComponent(cve)}`}>{cve}</Link>
         </p>
       )}
       <EmptyState title="Advisory generator arrives in Phase 2"

@@ -1,24 +1,36 @@
+@import "./brand/fonts.css";
+@import "./brand/tokens.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+@layer base {
+  body { @apply bg-ec-surface font-body text-ec-navy antialiased; }
+  h1, h2, h3, h4 { @apply font-heading; }
+  /* Body-size links: navy text (17:1) with orange underline — #E8541A text on white is only 3.7:1. */
+  a { text-underline-offset: 2px; }
+  :focus-visible { outline: 2px solid var(--ec-orange); outline-offset: 2px; }
+}
+
 @layer components {
-  .btn { @apply inline-flex items-center gap-1 rounded-md px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-600 focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50; }
-  .btn-primary { @apply btn bg-brand-600 text-white hover:bg-brand-700; }
-  .btn-secondary { @apply btn border border-slate-300 bg-white text-slate-800 hover:bg-slate-50; }
-  .input { @apply rounded-md border border-slate-300 bg-white px-2 py-1.5 text-sm focus:border-brand-600 focus:outline-none focus:ring-1 focus:ring-brand-600; }
-  .label { @apply mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-600; }
-  .card { @apply rounded-lg border border-slate-200 bg-white p-4 shadow-sm; }
-  .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-slate-600; }
+  .btn { @apply inline-flex items-center gap-1 rounded-sm px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-ec-orange focus-visible:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50; }
+  .btn-primary { @apply btn bg-ec-navy text-white hover:opacity-90; }
+  .btn-secondary { @apply btn border border-ec-border bg-white text-ec-navy hover:bg-ec-surface-alt; }
+  .btn-danger { @apply btn bg-red-700 text-white hover:bg-red-800; }
+  .link { @apply text-ec-navy underline decoration-ec-orange decoration-2 hover:text-ec-orange; }
+  .input { @apply rounded-sm border border-ec-border bg-white px-2 py-1.5 text-sm focus:border-ec-orange focus:outline-none focus:ring-1 focus:ring-ec-orange; }
+  .label { @apply mb-1 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-ec-slate; }
+  .card { @apply rounded-md border border-ec-border bg-white p-4 shadow-sm; }
+  .th { @apply px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-ec-slate; }
   .td { @apply px-3 py-2 align-top text-sm; }
-  .prose-help h2 { @apply mb-2 mt-5 text-base font-semibold text-slate-900; }
-  .prose-help h3 { @apply mb-1 mt-4 text-sm font-semibold text-slate-900; }
-  .prose-help p { @apply mb-2 text-sm leading-6 text-slate-700; }
-  .prose-help ol { @apply mb-2 ml-5 list-decimal space-y-1 text-sm text-slate-700; }
-  .prose-help ul { @apply mb-2 ml-5 list-disc space-y-1 text-sm text-slate-700; }
+  .prose-help h2 { @apply mb-2 mt-5 font-heading text-base font-bold text-ec-navy; }
+  .prose-help h3 { @apply mb-1 mt-4 font-heading text-sm font-bold text-ec-navy; }
+  .prose-help p { @apply mb-2 text-sm leading-6 text-ec-slate; }
+  .prose-help ol { @apply mb-2 ml-5 list-decimal space-y-1 text-sm text-ec-slate; }
+  .prose-help ul { @apply mb-2 ml-5 list-disc space-y-1 text-sm text-ec-slate; }
   .prose-help table { @apply mb-3 w-full border-collapse text-xs; }
-  .prose-help th { @apply border border-slate-200 bg-slate-50 px-2 py-1 text-left font-semibold; }
-  .prose-help td { @apply border border-slate-200 px-2 py-1 align-top; }
-  .prose-help code { @apply rounded bg-slate-100 px-1 py-0.5 text-[0.8em] text-slate-800; }
-  .prose-help a { @apply text-brand-600 underline; }
+  .prose-help th { @apply border border-ec-border bg-ec-surface-alt px-2 py-1 text-left font-semibold; }
+  .prose-help td { @apply border border-ec-border px-2 py-1 align-top; }
+  .prose-help code { @apply rounded bg-ec-surface-alt px-1 py-0.5 text-[0.8em] text-ec-navy; }
+  .prose-help a { @apply link; }
 }

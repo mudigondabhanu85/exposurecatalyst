@@ -1,0 +1,21 @@
+/* ExposureCatalyst brand tokens */
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --ec-navy: #0B1B33;
+  --ec-orange: #E8541A;
+  --ec-orange-bright: #FF7A3D;
+  --ec-slate: #4A5568;
+  --ec-slate-light: #B8C2D3;
+  --ec-surface: #F7F8FA;
+  --ec-surface-alt: #EEF1F5;
+  --ec-border: #D5DBE4;
+  --ec-white: #FFFFFF;
+
+  --ec-font-heading: 'Space Grotesk', Inter, system-ui, sans-serif;
+  --ec-font-body: Inter, system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --ec-radius-sm: 6px;
+  --ec-radius-md: 10px;
+  --ec-radius-lg: 20px;
+}

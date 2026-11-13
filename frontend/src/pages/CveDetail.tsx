@@ -42,7 +42,7 @@ export default function CveDetailPage() {
 
   return (
     <>
-      <nav aria-label="Breadcrumb" className="mb-2 text-sm"><Link className="text-brand-600 underline" to="/cves">CVE Intelligence</Link> / {c.cve_id}</nav>
+      <nav aria-label="Breadcrumb" className="mb-2 text-sm"><Link className="link" to="/cves">CVE Intelligence</Link> / {c.cve_id}</nav>
       <PageHeader
         title={c.cve_id}
         subtitle={c.title ?? undefined}
@@ -104,8 +104,8 @@ export default function CveDetailPage() {
               {c.references.map((r) => (
                 <li key={r.url} className="break-all">
                   {/* URLs were filtered to http(s) on ingestion; rel=noopener prevents tab-nabbing. */}
-                  <a className="text-brand-600 underline" href={r.url} target="_blank" rel="noopener noreferrer nofollow">{r.url}</a>
-                  {r.tags.map((t) => <span key={t} className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${t === "Exploit" ? "bg-slate-800 text-white" : t === "Patch" || t === "Vendor Advisory" ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-slate-600"}`}>{t}</span>)}
+                  <a className="link" href={r.url} target="_blank" rel="noopener noreferrer nofollow">{r.url}</a>
+                  {r.tags.map((t) => <span key={t} className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${t === "Exploit" ? "bg-slate-800 text-white" : t === "Patch" || t === "Vendor Advisory" ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-ec-slate"}`}>{t}</span>)}
                 </li>
               ))}
               {c.references.length === 0 && <li className="text-slate-500">No references.</li>}
@@ -123,10 +123,10 @@ export default function CveDetailPage() {
 
           <section className="card">
             <h2 className="mb-2 font-semibold">Timeline</h2>
-            <ol className="relative ml-2 border-l border-slate-200">
+            <ol className="relative ml-2 border-l border-ec-border">
               {c.events.map((e, i) => (
                 <li key={i} className="mb-3 ml-4">
-                  <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-brand-600" aria-hidden="true" />
+                  <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-ec-navy" aria-hidden="true" />
                   <p className="text-sm font-medium">{e.event_type.replace("_", " ")}</p>
                   <p className="text-xs text-slate-500">{fmtDateTime(e.occurred_at)} · {e.source}</p>
                   {e.event_type === "EPSS_CHANGED" && <p className="text-xs">{pct(e.detail.from as number)} → {pct(e.detail.to as number)}</p>}
@@ -139,7 +139,7 @@ export default function CveDetailPage() {
             <h2 className="mb-2 flex items-center gap-1 font-semibold">Field provenance<InfoTip k="provenance" /></h2>
             <dl className="space-y-1 text-xs">
               {Object.entries(c.provenance).sort().map(([f, p]) => (
-                <div key={f} className="flex justify-between gap-2"><dt className="font-mono">{f}</dt><dd className="text-slate-600">{p.source} · {fmtDateTime(p.at)}</dd></div>
+                <div key={f} className="flex justify-between gap-2"><dt className="font-mono">{f}</dt><dd className="text-ec-slate">{p.source} · {fmtDateTime(p.at)}</dd></div>
               ))}
             </dl>
           </section>

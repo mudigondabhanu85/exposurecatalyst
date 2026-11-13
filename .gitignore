@@ -15,3 +15,4 @@ dist/
 *.tsbuildinfo
 exposurecatalyst-brand.zip
 .pytest_cache/
+frontend/public/brand/

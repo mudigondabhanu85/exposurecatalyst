@@ -59,7 +59,7 @@ function Shell() {
   return (
     <div className="min-h-screen">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
-      <header className="bg-brand-900">
+      <header className="bg-ec-navy">
         <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-2">
           <span className="text-lg font-bold text-white">ExposureCatalyst</span>
           <nav aria-label="Main" className="flex flex-wrap gap-1">
@@ -84,7 +84,7 @@ function Shell() {
           <Route path="/news" element={<NewsPage />} />
           <Route path="/settings/*" element={<SettingsPage />} />
           <Route path="/help" element={<HelpCenterPage />} />
-          <Route path="*" element={<p className="text-sm text-slate-600">Page not found.</p>} />
+          <Route path="*" element={<p className="text-sm text-ec-slate">Page not found.</p>} />
         </Routes>
       </main>
     </div>

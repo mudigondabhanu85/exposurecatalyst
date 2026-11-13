@@ -1,0 +1,97 @@
+# ExposureCatalyst — Brand Kit
+
+Final logo, icons and design tokens for ExposureCatalyst (Vulnerability Intelligence &
+Advisory Platform). Copy this whole folder into the repo at `brand/` and point Claude Code
+at this README.
+
+## The mark
+
+A hexagon with a lightning spark and three orange nodes.
+- **Hexagon**: catalyst molecule and a protective boundary
+- **Spark**: acceleration, turning a new CVE into action fast
+- **Three nodes**: the connected sources (Qualys, Tanium, Wiz, CMDB, …)
+
+All SVGs have text converted to outlines, so they render identically without fonts installed.
+The node gaps in the hexagon are masks, so the mark works on any background.
+
+## Files
+
+| File | Use |
+|---|---|
+| `assets/svg/logo-light.svg` | Full lockup + tagline, on light backgrounds (docs cover, login page, DOCX cover, email header) |
+| `assets/svg/logo-dark.svg` | Full lockup + tagline, on dark/navy backgrounds |
+| `assets/svg/logo-light-wordmark.svg` | Mark + name, no tagline — app header on light theme |
+| `assets/svg/logo-dark-wordmark.svg` | Mark + name, no tagline — app header on dark theme / navy top bar |
+| `assets/svg/mark-light.svg`, `mark-dark.svg` | Mark only (≥ 64 px) — sidebar collapsed state, loading screen |
+| `assets/svg/mark-simple-light.svg`, `mark-simple-dark.svg` | Mark without nodes (< 64 px) |
+| `assets/svg/app-icon.svg` | Navy rounded tile, 256 px master — Okta app tile, PWA |
+| `assets/svg/og-image.svg` | 1200×630 social/link preview |
+| `assets/favicon/favicon.svg`, `favicon.ico` | Browser tab (ico contains 16/32/48) |
+| `assets/favicon/apple-touch-icon.png` | 180×180, iOS home screen |
+| `assets/favicon/icon-192.png`, `icon-512.png` | PWA manifest icons |
+| `assets/png/*` | PNG exports: `@2x` for retina, `-h40` sized for a 40 px-tall header, `app-icon-{16…1024}.png`, `og-image-1200x630.png` |
+| `tokens/tokens.css`, `tokens/tokens.json` | Colors and type as CSS variables / JSON |
+
+## Colors
+
+| Token | Hex | Use |
+|---|---|---|
+| `--ec-navy` | `#0B1B33` | Primary brand / ink, top bar, icon tile |
+| `--ec-orange` | `#E8541A` | Accent on light backgrounds ("Catalyst", primary buttons, links on hover) |
+| `--ec-orange-bright` | `#FF7A3D` | Accent on dark backgrounds |
+| `--ec-slate` | `#4A5568` | Secondary text on light |
+| `--ec-slate-light` | `#B8C2D3` | Secondary text on dark |
+| `--ec-surface` | `#F7F8FA` | Page background (light) |
+| `--ec-surface-alt` | `#EEF1F5` | Cards / panels background |
+| `--ec-border` | `#D5DBE4` | Borders, dividers |
+
+Orange is a brand accent, **not** a severity color. Keep severity badges separate
+(Critical / High / Medium / Low use their own palette) so a "Catalyst orange" button is never
+confused with a "High" finding.
+
+## Typography
+
+- **Space Grotesk** 500 / 700 — logo, page titles, headings (Google Fonts, OFL)
+- **Inter** 400 / 500 / 600 — UI body text, tables, forms, docs body (Google Fonts, OFL)
+
+## Usage rules
+
+- Clear space around the logo = the height of one hexagon node × 2 (≈ ⅙ of mark height).
+- Minimum size: full lockup 160 px wide; mark with nodes 64 px; below that use `mark-simple-*`.
+- Don't recolor, stretch, rotate, add shadows/gradients, or re-type the wordmark in another font.
+- On photos or busy backgrounds, use the dark lockup on a solid navy panel.
+
+---
+
+## Prompt section for Claude Code
+
+Paste this into the ExposureCatalyst build prompt (new section after TECH STACK):
+
+```text
+=====================================================================
+BRANDING (use the brand kit in /brand — do not redraw or re-type the logo)
+=====================================================================
+- Read brand/README.md first. Use the provided assets exactly as files; never recreate
+  the logo in code, re-type the wordmark, or change its colors.
+- Copy brand/tokens/tokens.css into the frontend and map it into the Tailwind theme
+  (colors: ec-navy, ec-orange, ec-orange-bright, ec-slate, ec-slate-light, ec-surface,
+  ec-surface-alt, ec-border; fonts: Space Grotesk for headings, Inter for body).
+- App shell: navy (#0B1B33) top bar with brand/assets/svg/logo-dark-wordmark.svg at 32–40 px
+  height; collapsed sidebar shows brand/assets/svg/mark-dark.svg.
+- Login / SSO page: brand/assets/svg/logo-light.svg centered above the "Sign in with Okta" button.
+- Favicons and PWA: brand/assets/favicon/* (favicon.svg + favicon.ico, apple-touch-icon.png,
+  icon-192.png, icon-512.png) wired into index.html and a web manifest
+  (name "ExposureCatalyst", theme_color #0B1B33, background_color #F7F8FA).
+- Open Graph / link previews: brand/assets/png/og-image-1200x630.png.
+- Okta app tile: brand/assets/png/app-icon-512.png (document this in the Okta setup guide).
+- Advisory emails: logo-light-wordmark PNG (-h40 / @2x) in the email header as a
+  CID-embedded inline image or hosted URL (no SVG in email — Outlook doesn't render it),
+  with alt text "ExposureCatalyst"; footer keeps "Generated by ExposureCatalyst" + advisory ID.
+- Excel exports: logo PNG in the top-left of the summary sheet, navy header row with white
+  bold text.
+- Documentation: logo-light.svg on the MkDocs site header and the DOCX/standalone-HTML cover
+  page; mark-light.svg as the docs favicon; brand colors in the MkDocs theme and the
+  reference.docx template.
+- Orange is a brand accent only; use a separate, accessible severity palette for
+  Critical/High/Medium/Low badges. All text must meet WCAG 2.1 AA contrast.
+```
