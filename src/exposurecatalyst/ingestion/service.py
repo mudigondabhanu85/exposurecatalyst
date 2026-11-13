@@ -152,4 +152,10 @@ def tick(settings: Settings, session_factory: sessionmaker[Session],
     from exposurecatalyst.alerts.engine import run as run_alerts
 
     run_alerts(settings, session_factory)  # evaluate rules against what just changed; deliver due alerts
+    from exposurecatalyst.maintenance import run_daily
+
+    try:
+        run_daily(settings, session_factory)  # retention, at most once a day
+    except Exception:  # noqa: BLE001 - housekeeping must never break ingestion
+        log.exception("maintenance_failed")
     return due

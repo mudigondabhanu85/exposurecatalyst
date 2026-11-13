@@ -5,6 +5,12 @@ import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type Me } from "../api";
 import { InfoTip } from "../help";
 
+/** Internal paths only: "/x" — never "//host", "/\\host" (browsers treat "\\" as "/") or a scheme. */
+export function safeNext(next: string | null): string {
+  if (!next || !/^\/(?![/\\])/.test(next) || next.includes("\\") || /[\u0000-\u001f]/.test(next)) return "/cves";
+  return next;
+}
+
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -26,7 +32,7 @@ export default function LoginPage() {
       const me = await api<Me>("/api/auth/login", { method: "POST", body: { username, password, totp_code: needCode ? code : undefined } });
       qc.setQueryData(["me"], me);
       const next = params.get("next") ?? "/cves";
-      nav(next.startsWith("/") && !next.startsWith("//") ? next : "/cves", { replace: true }); // no open redirect
+      nav(safeNext(next), { replace: true });
     } catch (err) {
       if (err instanceof ApiError && (err.detail as { mfa_required?: boolean })?.mfa_required) {
         setNeedCode(true);

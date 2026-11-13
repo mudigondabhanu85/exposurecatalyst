@@ -12,7 +12,7 @@ from functools import lru_cache
 from pathlib import Path
 
 import structlog
-from cryptography.fernet import Fernet, InvalidToken
+from cryptography.fernet import Fernet, InvalidToken, MultiFernet
 
 from exposurecatalyst.config import Settings, get_settings
 
@@ -21,8 +21,12 @@ _DEV_KEY_FILE = Path(".excat-dev.key")
 
 
 class SecretBox:
-    def __init__(self, key: bytes):
-        self._fernet = Fernet(key)
+    """Encrypts with the primary key; decrypts with the primary or any previous key (MultiFernet), so keys
+    can be rotated without downtime: deploy new primary + old key in EXCAT_ENCRYPTION_KEYS_PREVIOUS, run
+    `exposurecatalyst rotate-secrets`, then drop the old key."""
+
+    def __init__(self, key: bytes, previous: list[bytes] | None = None):
+        self._fernet = MultiFernet([Fernet(key), *(Fernet(k) for k in previous or [])])
 
     def encrypt(self, plaintext: str) -> str:
         return self._fernet.encrypt(plaintext.encode()).decode()
@@ -32,6 +36,13 @@ class SecretBox:
             return self._fernet.decrypt(token.encode()).decode()
         except InvalidToken as exc:  # wrong key or tampered ciphertext
             raise ValueError("Unable to decrypt secret (wrong EXCAT_ENCRYPTION_KEY?)") from exc
+
+    def rotate(self, token: str) -> str:
+        """Re-encrypt under the primary key (no-op cost if already primary)."""
+        try:
+            return self._fernet.rotate(token.encode()).decode()
+        except InvalidToken as exc:
+            raise ValueError("Unable to rotate secret: no configured key can decrypt it") from exc
 
 
 def _dev_key() -> bytes:
@@ -47,7 +58,9 @@ def _dev_key() -> bytes:
 
 def build_secret_box(settings: Settings) -> SecretBox:
     if settings.encryption_key is not None:
-        return SecretBox(settings.encryption_key.get_secret_value().encode())
+        previous = [k.strip().encode() for k in (settings.encryption_keys_previous.get_secret_value()
+                                                  if settings.encryption_keys_previous else "").split(",") if k.strip()]
+        return SecretBox(settings.encryption_key.get_secret_value().encode(), previous)
     if settings.env == "test":
         return SecretBox(Fernet.generate_key())
     return SecretBox(_dev_key())  # prod without a key is rejected by Settings validation

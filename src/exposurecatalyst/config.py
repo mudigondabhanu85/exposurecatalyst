@@ -61,6 +61,11 @@ class Settings(BaseSettings):
         description="Fernet key used to encrypt secrets at rest (TOTP seeds, connector credentials). "
         "Generate with `exposurecatalyst gen-key`. Required in prod.",
     )
+    encryption_keys_previous: SecretStr | None = Field(
+        None,
+        description="Comma-separated previous Fernet keys, accepted for decryption during key rotation "
+        "(see `exposurecatalyst rotate-secrets`). Remove once rotation has completed.",
+    )
     session_idle_timeout_minutes: int = Field(30, ge=5, description="Sign out after N minutes of inactivity.")
     session_absolute_timeout_minutes: int = Field(
         480, ge=15, description="Maximum session lifetime regardless of activity."
@@ -162,6 +167,12 @@ class Settings(BaseSettings):
         False, description="Allow self-hosted AI endpoints (Ollama, vLLM, LM Studio) on private/loopback addresses."
     )
     ai_rate_limit_per_user_per_minute: int = Field(20, ge=1, description="AI requests allowed per user per minute.")
+
+    # --- Retention ------------------------------------------------------------------------------
+    retention_sessions_days: int = Field(30, ge=1, description="Delete expired or revoked sessions older than this.")
+    retention_job_runs_days: int = Field(90, ge=7, description="Delete ingestion job-run history older than this.")
+    retention_ai_usage_days: int = Field(400, ge=30, description="Delete AI usage records older than this (13 months default).")
+    retention_alert_events_days: int = Field(365, ge=30, description="Delete delivered alert events older than this.")
 
     # --- Paths -------------------------------------------------------------------------------
     frontend_dist_dir: Path = Field(PROJECT_ROOT / "frontend" / "dist", description="Built React app served at /.")

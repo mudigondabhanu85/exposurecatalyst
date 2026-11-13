@@ -148,6 +148,36 @@ def cmd_audit_verify(_args) -> int:
     return 0 if ok else 2
 
 
+def cmd_rotate_secrets(args) -> int:
+    from exposurecatalyst.db.session import init_engine, session_scope
+    from exposurecatalyst.maintenance import rotate_secrets
+
+    s = get_settings()
+    if s.encryption_key is None:
+        print("EXCAT_ENCRYPTION_KEY must be set (the new primary key).", file=sys.stderr)
+        return 1
+    init_engine(s)
+    with session_scope() as db:
+        counts = rotate_secrets(db, dry_run=args.dry_run)
+    summary = ", ".join(f"{k}={v}" for k, v in counts.items())
+    print(("Dry run — would re-encrypt: " if args.dry_run else "Re-encrypted: ") + summary)
+    if not args.dry_run:
+        print("You can now remove the old key from EXCAT_ENCRYPTION_KEYS_PREVIOUS and redeploy.")
+    return 0
+
+
+def cmd_retention(_args) -> int:
+    from exposurecatalyst.db.session import init_engine, session_scope
+    from exposurecatalyst.maintenance import retention
+
+    s = get_settings()
+    init_engine(s)
+    with session_scope() as db:
+        counts = retention(db, s)
+    print("Deleted: " + ", ".join(f"{k}={v}" for k, v in counts.items()))
+    return 0
+
+
 def cmd_docs(args) -> int:
     from exposurecatalyst.docs.build import main as docs_main
 
@@ -185,6 +215,11 @@ def main(argv: list[str] | None = None) -> int:
 
     sub.add_parser("gen-key", help="Generate an EXCAT_ENCRYPTION_KEY").set_defaults(fn=cmd_gen_key)
     sub.add_parser("audit-verify", help="Verify the audit log hash chain").set_defaults(fn=cmd_audit_verify)
+
+    rs = sub.add_parser("rotate-secrets", help="Re-encrypt stored secrets under the current EXCAT_ENCRYPTION_KEY")
+    rs.add_argument("--dry-run", action="store_true")
+    rs.set_defaults(fn=cmd_rotate_secrets)
+    sub.add_parser("retention", help="Apply data-retention rules now").set_defaults(fn=cmd_retention)
 
     d = sub.add_parser("docs", help="Build documentation (see `docs --help`)")
     d.add_argument("docs_args", nargs=argparse.REMAINDER)
