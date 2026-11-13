@@ -263,3 +263,14 @@ def test_template_versioning_and_sod(login, approver, cve):
     author.post(f"/api/template-versions/{v2['id']}/submit")
     t = approver.post(f"/api/template-versions/{v2['id']}/approve").json()
     assert [v["status"] for v in t["versions"]] == ["retired", "approved"]
+
+
+def test_sla_ignores_past_kev_due_date(analyst, cve):
+    from datetime import date, timedelta
+
+    with get_session_factory()() as s:
+        c = s.query(Cve).filter_by(cve_id="CVE-2024-21762").one()
+        c.kev_due_date = date(2024, 2, 16)
+        s.commit()
+    a = _new(analyst)
+    assert a["sla_due_date"] == str(date.today() + timedelta(days=7))

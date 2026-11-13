@@ -111,6 +111,7 @@ def build_workbook(adv: Advisory, cve: Cve | None) -> bytes:
     _header(ws, 4, ["Field", "Value"])
     _write_rows(ws, 5, [list(r) for r in summary])
     for r in range(5, 5 + len(summary)):
+        ws.cell(row=r, column=2).alignment = Alignment(horizontal="left")
         ws.cell(row=r, column=1).font = Font(name=FONT, bold=True, color=NAVY)
         ws.cell(row=r, column=1).fill = PatternFill("solid", fgColor=SURFACE_ALT)
 

@@ -51,5 +51,6 @@
 :focus-visible { outline: 2px solid var(--md-accent-fg-color); outline-offset: 2px; }
 
 .ec-swatch { display: inline-block; width: 1.1em; height: 1.1em; border-radius: 3px; border: 1px solid var(--ec-border); vertical-align: middle; margin-right: .4em; }
-.ec-logo-panel { padding: 1.2rem; border-radius: 10px; border: 1px solid var(--ec-border); margin: .5rem 0; }
+/* Light-logo panel stays white in both schemes (brand rule: light lockup on light backgrounds). */
+.ec-logo-panel { padding: 1.2rem; border-radius: 10px; border: 1px solid var(--ec-border); margin: .5rem 0; background: #ffffff; }
 .ec-logo-panel--dark { background: var(--ec-navy); }

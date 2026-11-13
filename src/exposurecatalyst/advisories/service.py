@@ -196,7 +196,9 @@ def new_advisory(db: Session, cve: Cve, *, user_id: int, sources: list[str],
                  template_id: int | None = None) -> Advisory:
     severity = cve.severity if cve.severity in SLA_DAYS else ("HIGH" if cve.kev else "MEDIUM")
     tv = pick_template(db, severity, template_id)
-    due = cve.kev_due_date or (date.today() + timedelta(days=SLA_DAYS.get(severity, 30)))
+    sla_due = date.today() + timedelta(days=SLA_DAYS.get(severity, 30))
+    # CISA's KEV due date is used only while it is still ahead (older KEV entries have past dates).
+    due = min(cve.kev_due_date, sla_due) if cve.kev_due_date and cve.kev_due_date >= date.today() else sla_due
     products = sorted({f"{p.vendor} {p.product}".replace("_", " ").title() for p in cve.products})
     remediation = cve.kev_required_action or "Apply the vendor security update referenced below to all affected assets."
     if cve.patch_refs:
