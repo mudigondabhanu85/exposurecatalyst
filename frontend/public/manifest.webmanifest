@@ -1,0 +1,15 @@
+{
+  "name": "ExposureCatalyst",
+  "short_name": "ExposureCatalyst",
+  "description": "Vulnerability Intelligence & Advisory Platform",
+  "start_url": "/cves",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#0B1B33",
+  "background_color": "#F7F8FA",
+  "icons": [
+    { "src": "/brand/favicon/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/favicon/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/brand/favicon/favicon.svg", "sizes": "any", "type": "image/svg+xml" }
+  ]
+}

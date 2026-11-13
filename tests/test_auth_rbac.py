@@ -12,7 +12,8 @@ from exposurecatalyst.security.audit import record, verify_chain
 from exposurecatalyst.security.crypto import get_secret_box
 from tests.conftest import PASSWORD, ApiClient
 
-PUBLIC = {"/api/health/live", "/api/health/ready", "/api/auth/login"}
+# /api/docs + /api/redoc are static explorer pages (disable with EXCAT_API_DOCS_ENABLED=false).
+PUBLIC = {"/api/health/live", "/api/health/ready", "/api/auth/login", "/api/docs", "/api/redoc"}
 
 
 def test_every_api_route_requires_auth(app, client):
@@ -168,3 +169,17 @@ def test_docs_require_login(app, settings, tmp_path, login):
     anon = ApiClient(a)
     r = anon.get("/docs/", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"].startswith("/login")
+
+
+def test_spa_branding_assets(settings, tmp_path):
+    (tmp_path / "index.html").write_text('<meta property="og:image" content="__EXCAT_PUBLIC_URL__/brand/png/og.png">')
+    (tmp_path / "manifest.webmanifest").write_text("{}")
+    settings.frontend_dist_dir = tmp_path
+    settings.public_url = "https://excat.example.com"
+    from exposurecatalyst.main import create_app
+
+    c = ApiClient(create_app(settings))
+    assert 'content="https://excat.example.com/brand/png/og.png"' in c.get("/cves").text
+    assert c.get("/manifest.webmanifest").headers["content-type"].startswith("application/manifest+json")
+    swagger = c.get("/api/docs").text
+    assert "<title>ExposureCatalyst API</title>" in swagger and "/brand/favicon/favicon.svg" in swagger

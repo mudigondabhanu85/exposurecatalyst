@@ -24,7 +24,7 @@ APP_CSP = (
 # MkDocs Material and Swagger UI use inline bootstrap scripts; scoped to their paths only (ADR-0005).
 DOCS_CSP = (
     "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://unpkg.com; "
-    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data: https://fastapi.tiangolo.com; "
+    "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net; img-src 'self' data:; "
     "font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'"
 )
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}

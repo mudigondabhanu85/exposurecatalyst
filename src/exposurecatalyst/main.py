@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import html
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, RedirectResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse, Response
 from fastapi.staticfiles import StaticFiles
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from sqlalchemy import inspect
@@ -60,8 +61,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         version=__version__,
         description="Vulnerability Intelligence & Advisory Platform. Authenticate via `POST /api/auth/login`; "
         "send the `X-CSRF-Token` header (value from `/api/auth/me`) on every state-changing request.",
-        docs_url="/api/docs" if settings.api_docs_enabled else None,
-        redoc_url="/api/redoc" if settings.api_docs_enabled else None,
+        docs_url=None,  # branded Swagger/ReDoc routes registered below
+        redoc_url=None,
         openapi_url="/api/openapi.json" if settings.api_docs_enabled else None,
         lifespan=lifespan,
     )
@@ -82,6 +83,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         log.exception("unhandled_error", path=request.url.path)
         return JSONResponse({"detail": "Internal server error"}, status_code=500)
 
+    if settings.api_docs_enabled:
+        from fastapi.openapi.docs import get_redoc_html, get_swagger_ui_html
+
+        @app.get("/api/docs", include_in_schema=False)
+        def swagger_ui():
+            return get_swagger_ui_html(openapi_url="/api/openapi.json", title="ExposureCatalyst API",
+                                       swagger_favicon_url="/brand/favicon/favicon.svg")
+
+        @app.get("/api/redoc", include_in_schema=False)
+        def redoc():
+            return get_redoc_html(openapi_url="/api/openapi.json", title="ExposureCatalyst API",
+                                  redoc_favicon_url="/brand/favicon/favicon.svg", with_google_fonts=False)
+
     if settings.metrics_enabled:
 
         @app.get("/metrics", include_in_schema=False)
@@ -101,14 +115,26 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     if settings.docs_site_dir.is_dir():
         app.mount("/docs", StaticFiles(directory=settings.docs_site_dir, html=True), name="docs")
-    _mount_spa(app, settings.frontend_dist_dir)
+    _mount_spa(app, settings.frontend_dist_dir, settings.public_url.rstrip("/"))
     return app
 
 
-def _mount_spa(app: FastAPI, dist: Path) -> None:
+MEDIA_TYPES = {".webmanifest": "application/manifest+json", ".svg": "image/svg+xml", ".ico": "image/x-icon"}
+
+
+def _mount_spa(app: FastAPI, dist: Path, public_url: str) -> None:
     index = dist / "index.html"
+    index_html: str | None = None
+
+    def render_index() -> HTMLResponse:
+        nonlocal index_html
+        if index_html is None:  # absolute URLs for Open Graph / Twitter link previews
+            index_html = index.read_text(encoding="utf-8").replace("__EXCAT_PUBLIC_URL__", html.escape(public_url))
+        return HTMLResponse(index_html)
     if (dist / "assets").is_dir():
         app.mount("/assets", StaticFiles(directory=dist / "assets"), name="assets")
+    if (dist / "brand").is_dir():
+        app.mount("/brand", StaticFiles(directory=dist / "brand"), name="brand")
 
     @app.get("/{full_path:path}", include_in_schema=False)
     def spa(full_path: str):
@@ -116,9 +142,9 @@ def _mount_spa(app: FastAPI, dist: Path) -> None:
             raise HTTPException(404, "Not found")
         candidate = (dist / full_path).resolve()
         if full_path and candidate.is_file() and dist.resolve() in candidate.parents:
-            return FileResponse(candidate)
+            return FileResponse(candidate, media_type=MEDIA_TYPES.get(candidate.suffix))
         if index.exists():
-            return FileResponse(index)
+            return render_index()
         return JSONResponse({"detail": "Frontend not built. Run `make frontend`."}, status_code=404)
 
 
