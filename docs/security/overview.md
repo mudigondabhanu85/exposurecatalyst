@@ -1,8 +1,8 @@
-# Security overview (Phase 1)
+# Security overview
 
 ExposureCatalyst handles sensitive data: asset inventories, integration credentials and recipient lists. It
-is designed to align with **OWASP ASVS Level 2**. This page covers the controls implemented in Phase 1. The
-full STRIDE threat model, data-flow diagrams and AWS controls mapping follow in Phase 6.
+is designed to align with **OWASP ASVS Level 2**. See also the [threat model](threat-model.md), [data-flow diagrams](../architecture/data-flow.md),
+[AWS controls mapping](aws-controls.md) and [data retention](data-retention.md).
 
 ## Data classification
 

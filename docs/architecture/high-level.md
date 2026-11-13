@@ -64,7 +64,8 @@ network architecture are documented in Phase 6.
 4. **App → internet**: Network Firewall domain allowlist, plus the app-level SSRF guard (defence in depth).
 5. **App → AWS APIs**: VPC endpoints with endpoint policies, and IAM task roles.
 
-The full STRIDE threat model and Level 0/1 data-flow diagrams follow in Phase 6.
+See the [STRIDE threat model](../security/threat-model.md), [data-flow diagrams](data-flow.md),
+[network](network.md) and [disaster recovery](../operations/disaster-recovery.md).
 
 ## Resilience
 

@@ -64,4 +64,4 @@ migrations and seeds the system roles.
 ## AWS
 
 The production reference deployment is described in [High-level AWS architecture](../architecture/high-level.md).
-Terraform modules arrive in Phase 6.
+The reference Terraform (VPC, WAF, CloudFront, ALB, ECS Fargate, Aurora, ElastiCache, Network Firewall, KMS, monitoring) is in `infra/terraform/`. See `infra/terraform/README.md` for usage, and [Network](../architecture/network.md) and [Disaster recovery](../operations/disaster-recovery.md) for the design.

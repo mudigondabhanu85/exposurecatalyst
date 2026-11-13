@@ -9,14 +9,14 @@ footer, so it can be referenced in tickets and replies.
 ```mermaid
 stateDiagram-v2
     [*] --> draft: Create Advisory Email (CVE detail)
-    draft --> in_review: Submit for review (advisory:create)
-    in_review --> draft: Request changes (advisory:approve, with comment)
-    in_review --> approved: Approve (advisory:approve, not the author)
-    approved --> sent: Send via SMTP (advisory:send, confirmed)
+    draft --> in_review: Submit for review (advisory#58;create)
+    in_review --> draft: Request changes (advisory#58;approve, with comment)
+    in_review --> approved: Approve (advisory#58;approve, not the author)
+    approved --> sent: Send via SMTP (advisory#58;send, confirmed)
     draft --> cancelled
     in_review --> cancelled
     approved --> cancelled
-    approved --> approved: Copy / .eml / HTML / PDF / Excel (advisory:export)
+    approved --> approved: Copy / .eml / HTML / PDF / Excel (advisory#58;export)
 ```
 
 - **Drafts** are editable by anyone with `advisory:create`. While **in review** or later, the content is locked.

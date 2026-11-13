@@ -81,6 +81,9 @@ nav:
       - AI providers & data protection: admin-guide/ai.md
   - Architecture:
       - High-level AWS architecture: architecture/high-level.md
+      - Network: architecture/network.md
+      - Data-flow diagrams: architecture/data-flow.md
+      - Components: architecture/components.md
       - Identity flow: architecture/identity-flow.md
       - Sequence diagrams: architecture/sequences.md
       - Diagram standards & pipeline: architecture/diagram-standards.md
@@ -102,12 +105,17 @@ nav:
       - ServiceNow CMDB: integrations/servicenow-cmdb.md
   - Security:
       - Security overview: security/overview.md
+      - Threat model (STRIDE): security/threat-model.md
+      - AWS controls mapping: security/aws-controls.md
+      - Data retention: security/data-retention.md
   - Reference:
       - Configuration: reference/configuration.md
       - Roles × permissions: reference/rbac-matrix.md
       - API: reference/api.md
   - Operations:
       - Runbooks: operations/runbooks.md
+      - Monitoring & metrics: operations/monitoring.md
+      - Disaster recovery: operations/disaster-recovery.md
   - In-app help:
       - help/help-center.md
       - help/cve-intelligence.md
