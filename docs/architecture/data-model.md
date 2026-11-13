@@ -22,6 +22,25 @@ erDiagram
     advisories ||--o{ advisory_assets : assets
     advisories ||--o{ advisory_deliveries : "sends / exports"
     users ||--o{ advisories : authors
+    integrations ||--o{ integration_cve_checks : "checked CVEs"
+    integrations ||--o{ asset_findings : "reports"
+    integrations ||--o{ integration_vuln_map : "CVE → vendor IDs"
+    integrations { int id PK
+      string kind "qualys|tanium|wiz|zafran|armorcode|servicenow_cmdb"
+      string base_url
+      json config "options + field_map"
+      text secrets_enc "Fernet JSON" }
+    integration_cve_checks { int id PK
+      string cve_id
+      string status "ok|error|unsupported"
+      int asset_count
+      bool truncated }
+    asset_findings { int id PK
+      string cve_id
+      string hostname
+      string ip_address
+      string resource_id
+      string owner }
     advisories { int id PK
       string advisory_id UK "EXCAT-YYYY-NNNN"
       string cve_id
@@ -141,6 +160,12 @@ erDiagram
 | `advisory_source_status.manual_count` | int, nullable | Analyst count. 0 = checked, none found; NULL = not recorded | analyst |
 | `advisory_assets.*` | | Hostname, IP, OS, cloud account, resource ID, owner, BU, environment, detection date, plugin/QID/ID, `is_manual` (**Confidential**) | analyst / connectors |
 | `advisory_deliveries` | | Channel, actor, time, recipients, Message-ID, status, error for every send and export | system |
+| `integrations.secrets_enc` | text | Fernet-encrypted JSON of the connector's secret fields (**Restricted**). Never returned or logged | admin |
+| `integrations.config` | JSON | Non-secret options and `field_map` overrides, validated against the connector spec | admin |
+| `integrations.state` | JSON | Connector bookkeeping, e.g. Qualys `kb_synced_at` | system |
+| `integration_cve_checks` | | One row per (integration, CVE): status, asset count, truncated flag, error. Drives *No* vs *Not Integrated* | system |
+| `asset_findings` | | Normalized affected assets per (integration, CVE), replaced on each check (**Confidential**) | connectors |
+| `integration_vuln_map` | | CVE → vendor vulnerability ID (Qualys QIDs) | connectors |
 | `distribution_lists` | | Named reusable To/CC/BCC sets | analyst |
 | `audit_log.prev_hash` / `hash` | string(64) | Hash chain: `sha256(prev_hash + canonical_json(row))` | system |
 

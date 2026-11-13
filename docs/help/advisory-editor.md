@@ -20,7 +20,9 @@ right side shows a live preview of the exact email.
    assets: `[CRITICAL] EXCAT-2026-0042 Security Advisory: CVE-… – Product – N assets affected`.
 2. **Recipients.** Enter To, CC and BCC addresses separated by commas. Click a **distribution list** to add its
    members, or **Save current recipients as a list** to reuse them later.
-3. **Asset validation matrix.** One row per source. Type a **Manual count** when you checked a tool by hand.
+3. **Asset validation matrix.** One row per source. Click **Pull from integrations** to query every enabled
+   tool. This replaces integration rows, keeps your manual rows, and marks each successfully checked source
+   *Yes* or *No*. Type a **Manual count** when you checked a tool by hand.
    Enter `0` to record that you checked and found nothing, which shows *No*.
 4. **Affected assets.** Add rows one at a time, or **Upload CSV/XLSX** with a header row. Recognized columns
    include Hostname, IP Address, OS, Cloud Account, Resource ID, Owner, Business Unit, Environment, Detection

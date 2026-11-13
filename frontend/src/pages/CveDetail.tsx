@@ -1,13 +1,15 @@
 import type { ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, fmtDate, fmtDateTime, pct, type CveDetail } from "../api";
 import { useAuth } from "../auth";
 import { InfoTip } from "../help";
 import { LoadingScreen } from "../components/StatusScreen";
 import { EmptyState, ErrorNote, KevBadge, PageHeader, SeverityBadge } from "../components/ui";
 
-interface AssetPanel { integrations_configured: boolean; total_unique_assets: number; sources: unknown[]; message: string }
+interface PanelSource { integration_id: number; name: string; source: string; checked_at: string | null; status: string; error: string | null; asset_count: number; truncated: boolean }
+interface PanelAsset { hostname: string | null; ip_address: string | null; resource_id: string | null; owner: string | null; environment: string | null; sources: string[] }
+interface AssetPanel { integrations_configured: boolean; total_unique_assets: number; sources: PanelSource[]; assets: PanelAsset[]; message: string }
 
 function Stat({ label, tip, value, sub }: { label: string; tip: string; value: ReactNode; sub?: ReactNode }) {
   return (
@@ -36,6 +38,9 @@ export default function CveDetailPage() {
   const nav = useNavigate();
   const q = useQuery({ queryKey: ["cve", cveId], queryFn: () => api<CveDetail>(`/api/cves/${encodeURIComponent(cveId)}`) });
   const assets = useQuery({ queryKey: ["cve-assets", cveId], queryFn: () => api<AssetPanel>(`/api/cves/${encodeURIComponent(cveId)}/assets`) });
+  const qc = useQueryClient();
+  const refreshAssets = useMutation({ mutationFn: () => api<AssetPanel>(`/api/cves/${encodeURIComponent(cveId)}/assets/refresh`, { method: "POST" }),
+                                      onSuccess: (p) => qc.setQueryData(["cve-assets", cveId], p) });
   const c = q.data;
 
   if (q.isError) return <><PageHeader title={cveId} helpId="cve-detail" /><ErrorNote error={q.error} /></>;
@@ -119,7 +124,24 @@ export default function CveDetailPage() {
             <h2 className="mb-2 flex items-center gap-1 font-semibold">Affected assets<InfoTip k="affected_assets" /></h2>
             {assets.data && !assets.data.integrations_configured ? (
               <EmptyState title="No integrations configured" why={assets.data.message} fix={can("integration:manage") ? { label: "Configure integrations", to: "/settings/integrations" } : undefined} />
-            ) : <p className="text-sm">{assets.data?.total_unique_assets ?? 0} unique assets</p>}
+            ) : assets.data && (<>
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-2xl font-semibold">{assets.data.total_unique_assets}<span className="ml-1 text-sm font-normal text-ec-slate">unique assets</span></p>
+                {can("cve:refresh") && <button className="btn-secondary" onClick={() => refreshAssets.mutate()} disabled={refreshAssets.isPending}>{refreshAssets.isPending ? "Checking…" : "Check now"}</button>}
+              </div>
+              <ErrorNote error={refreshAssets.error} />
+              <ul className="mb-2 space-y-1 text-xs">{assets.data.sources.map((s) => (
+                <li key={s.integration_id} className="flex justify-between gap-2" title={s.error ?? undefined}>
+                  <span><strong>{s.source}</strong> · {s.name}</span>
+                  <span className={s.status === "error" ? "text-red-800" : "text-ec-slate"}>{s.status === "never" ? "not checked" : s.status === "ok" ? `${s.asset_count}${s.truncated ? "+ (truncated)" : ""} · ${fmtDateTime(s.checked_at)}` : s.status}</span>
+                </li>))}</ul>
+              {assets.data.assets.length > 0 && <div className="max-h-64 overflow-auto"><table className="min-w-full text-xs">
+                <thead className="sticky top-0 bg-ec-surface-alt"><tr><th className="th">Host / IP</th><th className="th">Owner</th><th className="th">Sources</th></tr></thead>
+                <tbody>{assets.data.assets.map((x, i) => (
+                  <tr key={i} className="border-t border-ec-surface-alt"><td className="td">{x.hostname ?? x.ip_address ?? x.resource_id}<div className="text-ec-slate">{x.hostname ? x.ip_address : ""}</div></td>
+                    <td className="td">{x.owner}{x.environment && <div className="text-ec-slate">{x.environment}</div>}</td><td className="td">{x.sources.join(", ")}</td></tr>))}
+                </tbody></table></div>}
+            </>)}
           </section>
 
           <section className="card">

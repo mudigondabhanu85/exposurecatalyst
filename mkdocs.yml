@@ -85,6 +85,14 @@ nav:
           - ADR-0003 DB-coordinated scheduler tick: architecture/adr/0003-db-coordinated-scheduler.md
           - ADR-0004 Single-source help & docs: architecture/adr/0004-single-source-help.md
           - ADR-0005 Content Security Policy scoping: architecture/adr/0005-csp-scoping.md
+  - Integrations:
+      - integrations/index.md
+      - Qualys VMDR: integrations/qualys.md
+      - Tanium: integrations/tanium.md
+      - Wiz: integrations/wiz.md
+      - Zafran: integrations/zafran.md
+      - ArmorCode: integrations/armorcode.md
+      - ServiceNow CMDB: integrations/servicenow-cmdb.md
   - Security:
       - Security overview: security/overview.md
   - Reference:
@@ -101,6 +109,7 @@ nav:
       - help/advisory-editor.md
       - help/advisory-templates.md
       - help/settings-smtp.md
+      - help/settings-integrations.md
       - help/news.md
       - help/settings-sources.md
       - help/settings-rbac.md

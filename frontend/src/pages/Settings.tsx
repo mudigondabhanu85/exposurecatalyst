@@ -5,6 +5,7 @@ import { api, fmtDateTime, type SourceInfo, type SourcesResp } from "../api";
 import { useAuth } from "../auth";
 import { InfoTip } from "../help";
 import { Forbidden } from "../components/StatusScreen";
+import IntegrationsSettings from "./Integrations";
 import { EmptyState, ErrorNote, HealthBadge, PageHeader } from "../components/ui";
 
 interface Role { id: number; name: string; description: string | null; is_system: boolean; permissions: string[]; user_count: number }
@@ -16,7 +17,7 @@ const SUBTABS: { to: string; label: string; perm: string; phase?: number }[] = [
   { to: "sso", label: "Identity & SSO", perm: "sso:manage", phase: 4 },
   { to: "rbac", label: "Users & RBAC", perm: "user:manage" },
   { to: "database", label: "Database", perm: "settings:manage", phase: 6 },
-  { to: "integrations", label: "Integrations", perm: "integration:manage", phase: 3 },
+  { to: "integrations", label: "Integrations", perm: "integration:manage" },
   { to: "smtp", label: "SMTP", perm: "settings:manage" },
   { to: "sources", label: "CVE Sources", perm: "source:manage" },
   { to: "alerts", label: "Alerts & Scheduling", perm: "settings:manage", phase: 4 },
@@ -45,6 +46,7 @@ export default function SettingsPage() {
           <Route path="sources" element={can("source:manage") ? <SourcesSettings /> : <Forbidden />} />
           <Route path="rbac" element={can("user:manage") ? <RbacSettings /> : <Forbidden />} />
           <Route path="smtp" element={can("settings:manage") ? <SmtpSettings /> : <Forbidden />} />
+          <Route path="integrations" element={can("integration:manage") ? <IntegrationsSettings /> : <Forbidden />} />
           {SUBTABS.filter((t) => t.phase).map((t) => (
             <Route key={t.to} path={t.to} element={can(t.perm) ? (
               <><PageHeader title={t.label} helpId="help-center" /><EmptyState title={`${t.label} arrives in Phase ${t.phase}`} why="This settings area is part of the delivery plan and will include a step-by-step setup wizard with Test validation at each step." /></>

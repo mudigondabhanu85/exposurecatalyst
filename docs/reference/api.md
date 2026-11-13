@@ -48,6 +48,9 @@ Service accounts and API tokens for automation are planned for a later phase.
 | `GET/POST/DELETE /api/distribution-lists` | `advisory:create` | Saved recipient sets |
 | `GET /api/templates` · `POST /api/templates/{id}/versions` · `POST /api/template-versions/{id}/submit\|approve` | `template:manage` / `advisory:approve` | Versioned templates |
 | `GET/PUT /api/settings/smtp` · `POST /api/settings/smtp/test` | `settings:manage` | SMTP configuration (password never returned) |
+| `GET /api/integrations/catalog` · `GET/POST /api/integrations` · `PATCH/DELETE /api/integrations/{id}` · `POST …/{id}/test` | `integration:manage` | Connectors (secrets write-only) |
+| `GET /api/cves/{cve_id}/assets` · `POST …/assets/refresh` | `cve:view` / `cve:refresh` | Affected assets across integrations (refresh bypasses the cache) |
+| `POST /api/advisories/{id}/assets/pull` `{force}` | `advisory:create` | Pull integration findings into a draft advisory |
 | `GET /metrics` | network-restricted | Prometheus metrics |
 
 ## Errors

@@ -54,6 +54,9 @@ Every setting is an environment variable with the `EXCAT_` prefix (also read fro
 | `EXCAT_SMTP_ALLOW_PRIVATE_HOSTS` | `bool` | `False` | Allow an SMTP relay on a private/internal address (common for corporate relays). Cloud metadata addresses are always blocked. |
 | `EXCAT_SMTP_ALLOW_PLAINTEXT` | `bool` | `False` | Allow SMTP without TLS. Development only (e.g. a local Mailpit); never in prod. |
 | `EXCAT_SMTP_TIMEOUT_SECONDS` | `float` | `30.0` | SMTP connect/send timeout. |
+| `EXCAT_CONNECTOR_MAX_ASSETS` | `int` | `10000` | Maximum affected assets fetched from one integration for one CVE (result is flagged truncated). |
+| `EXCAT_CONNECTOR_TIMEOUT_SECONDS` | `float` | `60.0` | HTTP timeout for connector API calls. |
+| `EXCAT_CONNECTOR_CACHE_MINUTES` | `int` | `60` | Re-use an integration's CVE results younger than this instead of calling the tool again. |
 | `EXCAT_FRONTEND_DIST_DIR` | `Path` | `frontend/dist` | Built React app served at /. |
 | `EXCAT_DOCS_SITE_DIR` | `Path` | `dist/docs/site` | Built MkDocs site served at /docs. |
 | `EXCAT_HELP_DIR` | `Path` | `docs/help` | In-app help Markdown (single source with docs). |

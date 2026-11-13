@@ -76,6 +76,18 @@ In AWS, the Network Firewall domain allowlist enforces the same policy at the ne
 | Preview rendering | Served with its own CSP (`default-src 'none'; sandbox`), framed only by the app, and shown in a `sandbox` iframe |
 | PDF renderer fetching remote resources | `link_callback` blocks everything except embedded `data:` images |
 
+## Integration controls (Phase 3)
+
+| Risk | Control |
+|---|---|
+| SSRF via admin-configured base URLs | `https` only. The host must match the vendor's SaaS domains or `EXCAT_EGRESS_ALLOWLIST`. DNS checked against private and metadata ranges. No query or fragment |
+| Redirect / pagination hops to other hosts | GET redirects re-validated per hop. Qualys next-page links accepted only on the configured host. OAuth token URLs restricted to vendor auth hosts |
+| Credential exposure | Secrets write-only (API returns only *which* keys are set). Fernet-encrypted. Excluded from audit details and logs |
+| Over-privileged service accounts | Guides specify minimum read-only roles and scopes per tool |
+| Query injection into vendor APIs | GraphQL variables (never concatenation). ServiceNow encoded-query values stripped of `^`/newlines. Table names validated |
+| Malicious or oversized responses | `defusedxml` for Qualys XML. Result cap `EXCAT_CONNECTOR_MAX_ASSETS` with truncation flag. Column-length truncation. Text-only rendering |
+| One tool failing silently | Per-check status. A failed lookup is never reported as *No* (shown as *Not Integrated* with the error) |
+
 ## Secrets management
 
 - `EXCAT_ENCRYPTION_KEY` (Fernet) encrypts secrets stored in the DB. In AWS it's delivered from Secrets Manager

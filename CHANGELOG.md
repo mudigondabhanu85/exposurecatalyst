@@ -3,6 +3,25 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.3.0] — 2026-11-13 — Phase 3: integrations
+
+### Added
+- Connector framework: plugin interface and registry, per-connector config schema, default field maps with
+  per-integration overrides, encrypted write-only credentials, Settings → Integrations with a guided setup
+  and *Save & test*.
+- Connectors: **Qualys VMDR** (CVE→QID KnowledgeBase map and Host List Detection), **Wiz** (OAuth2 and GraphQL
+  vulnerability findings), **Tanium** (Gateway GraphQL sensor filter), **ServiceNow CMDB** (Vulnerability
+  Response vulnerable items and CMDB enrichment of owner / business unit / environment), **Zafran** and
+  **ArmorCode** (configurable REST).
+- CVE detail *Affected assets* panel with cross-tool de-duplication and **Check now**. Advisory **Pull from
+  integrations** fills the validation matrix (Yes / No / Not Integrated) and keeps manual rows.
+- Per-(integration, CVE) result cache (`EXCAT_CONNECTOR_CACHE_MINUTES`), result cap with a truncation flag,
+  per-tool failure isolation.
+- Integration guides for every connector, a help topic, and an updated data model, API and security docs.
+
+### Changed
+- The hardened outbound HTTP client now supports any method and per-connector host allowlists.
+
 ## [0.2.0] — 2026-11-13 — Phase 2 + brand identity
 
 ### Added

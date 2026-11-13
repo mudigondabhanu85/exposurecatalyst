@@ -3,7 +3,7 @@
 name: exposurecatalyst
 
 x-app: &app
-  image: exposurecatalyst:0.2.0
+  image: exposurecatalyst:0.3.0
   env_file: .env
   environment:
     EXCAT_DATABASE_URL: postgresql+psycopg://excat:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}@postgres:5432/excat

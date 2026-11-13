@@ -32,7 +32,7 @@ RUN pip install -e ".[docs]" && python -m exposurecatalyst.docs build --skip-dia
 FROM python:3.12.7-slim-bookworm AS runtime
 LABEL org.opencontainers.image.title="exposurecatalyst" \
       org.opencontainers.image.description="ExposureCatalyst — Vulnerability Intelligence & Advisory Platform" \
-      org.opencontainers.image.version="0.2.0"
+      org.opencontainers.image.version="0.3.0"
 RUN useradd --system --uid 10001 --home /app excat
 COPY --from=build /opt/venv /opt/venv
 WORKDIR /app

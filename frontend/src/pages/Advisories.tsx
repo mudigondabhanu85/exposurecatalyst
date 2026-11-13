@@ -256,7 +256,14 @@ function AdvisoryEditor() {
             </Section>
           </form>
 
-          <Section title="Asset validation matrix" tip="validated">
+          <Section title="Asset validation matrix" tip="validated" actions={editable && (
+            <button className="btn-secondary" disabled={call.isPending} onClick={async () => {
+              try {
+                const r = await api<{ results: { source: string; status: string; assets: number; truncated: boolean; error: string | null }[]; advisory: Advisory }>(`/api/advisories/${id}/assets/pull`, { method: "POST", body: { force: false } });
+                set(r.advisory);
+                setNote(r.results.length ? r.results.map((x) => `${x.source}: ${x.status === "ok" ? `${x.assets}${x.truncated ? "+" : ""} asset(s)` : `${x.status}${x.error ? ` — ${x.error}` : ""}`}`).join(" · ") : "No integrations are enabled — ask an admin to configure Settings → Integrations.");
+              } catch (err) { setNote(`Pull failed: ${(err as Error).message}`); }
+            }}>Pull from integrations</button>)}>
             <table className="min-w-full text-sm">
               <thead className="bg-ec-surface-alt"><tr><th className="th">Source</th><th className="th">Validated</th><th className="th text-right">Assets</th><th className="th">Last checked</th><th className="th">Manual count</th></tr></thead>
               <tbody>{a.matrix.map((r) => (
@@ -271,7 +278,7 @@ function AdvisoryEditor() {
               </tbody>
               <tfoot><tr className="border-t-2 border-ec-border"><td className="td font-bold" colSpan={2}>Total unique affected assets<InfoTip k="affected_assets" /></td><td className="td text-right font-bold">{a.total_unique_assets}</td><td colSpan={2} /></tr></tfoot>
             </table>
-            <p className="mt-2 text-xs text-ec-slate">Integrations (Phase 3) fill this automatically. Until then, enter counts or asset rows manually — they are labelled “Manual” in the email and Excel.</p>
+            <p className="mt-2 text-xs text-ec-slate">“Pull from integrations” queries every enabled tool and replaces integration rows (manual rows are kept). Manual counts and rows are labelled “Manual” in the email and Excel.</p>
           </Section>
 
           <Section title={`Affected assets (${a.assets.length})`}>
