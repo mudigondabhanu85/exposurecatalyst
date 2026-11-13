@@ -12,20 +12,35 @@ from exposurecatalyst.security.audit import record, verify_chain
 from exposurecatalyst.security.crypto import get_secret_box
 from tests.conftest import PASSWORD, ApiClient
 
-# /api/docs + /api/redoc are static explorer pages (disable with EXCAT_API_DOCS_ENABLED=false).
-PUBLIC = {"/api/health/live", "/api/health/ready", "/api/auth/login", "/api/docs", "/api/redoc"}
+# Deliberately public: health, login, the static API explorer, SAML SP endpoints (metadata, login redirect,
+# IdP POST to the ACS) and the SSO status probe used by the login page.
+PUBLIC = {"/api/health/live", "/api/health/ready", "/api/auth/login", "/api/docs", "/api/redoc",
+          "/api/auth/sso", "/api/saml/metadata", "/api/auth/saml/login", "/api/auth/saml/acs"}
+
+
+def all_api_routes(routes):
+    """Flatten routers. FastAPI ≥0.15x nests include_router() results as _IncludedRouter objects."""
+    for r in routes:
+        if hasattr(r, "original_router"):
+            yield from all_api_routes(r.original_router.routes)
+        elif isinstance(r, APIRoute):
+            yield r
 
 
 def test_every_api_route_requires_auth(app, client):
-    for route in app.routes:
-        if not isinstance(route, APIRoute) or not route.path.startswith("/api") or route.path in PUBLIC:
+    import re
+
+    checked = 0
+    for route in all_api_routes(app.routes):
+        if not route.path.startswith(("/api", "/scim")) or route.path in PUBLIC:
             continue
-        path = route.path.replace("{cve_id}", "CVE-2024-0001").replace("{name}", "nvd")
-        path = path.replace("{page_id}", "x").replace("{search_id}", "1").replace("{role_id}", "1")
-        path = path.replace("{user_id}", "1")
+        path = route.path.replace("{cve_id}", "CVE-2024-0001").replace("{fmt}", "eml")
+        path = re.sub(r"\{[^}]+\}", "1", path)
         for method in route.methods - {"HEAD", "OPTIONS"}:
             r = client.request(method, path, json={})
             assert r.status_code == 401, f"{method} {path} returned {r.status_code}"
+            checked += 1
+    assert checked > 80  # guard against the walker silently finding nothing again
 
 
 def test_login_success_sets_hardened_cookies(client, make_user):

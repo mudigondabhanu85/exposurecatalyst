@@ -11,6 +11,16 @@ from exposurecatalyst.models.advisory import (
 from exposurecatalyst.models.cve import Cve, CveEvent, CveProduct, JobRun, SavedSearch, SourceState
 from exposurecatalyst.models.identity import Role, RolePermission, User, UserSession, user_roles
 from exposurecatalyst.models.integration import AssetFinding, Integration, IntegrationCveCheck, IntegrationVulnMap
+from exposurecatalyst.models.sso import (
+    AlertEvent,
+    AlertRule,
+    GroupRoleMapping,
+    SamlAssertion,
+    SamlRequest,
+    ScimGroup,
+    ScimGroupMember,
+    ScimToken,
+)
 from exposurecatalyst.models.system import AppSetting, AuditLog
 
 __all__ = [
@@ -22,7 +32,15 @@ __all__ = [
     "AdvisoryTemplate",
     "AdvisoryTemplateVersion",
     "DistributionList",
+    "AlertEvent",
+    "AlertRule",
     "AppSetting",
+    "GroupRoleMapping",
+    "SamlAssertion",
+    "SamlRequest",
+    "ScimGroup",
+    "ScimGroupMember",
+    "ScimToken",
     "AssetFinding",
     "Integration",
     "IntegrationCveCheck",

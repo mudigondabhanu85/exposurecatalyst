@@ -32,6 +32,8 @@ DOCS_CSP = (
 EMAIL_PREVIEW_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; frame-ancestors 'self'; sandbox"
 _PREVIEW_PATH = re.compile(r"^/api/advisories/\d+/preview$")
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+# Cross-site by design and not cookie-authenticated: the IdP's SAML POST and bearer-token SCIM.
+ORIGIN_EXEMPT = ("/api/auth/saml/acs", "/scim/")
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -90,7 +92,7 @@ class OriginCheckMiddleware(BaseHTTPMiddleware):
         self.allowed = settings.allowed_origins
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
-        if request.method in UNSAFE_METHODS:
+        if request.method in UNSAFE_METHODS and not request.url.path.startswith(ORIGIN_EXEMPT):
             origin = request.headers.get("origin")
             if origin and origin not in self.allowed:
                 return JSONResponse({"detail": "Cross-origin request rejected"}, status_code=403)

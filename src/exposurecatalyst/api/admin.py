@@ -88,6 +88,22 @@ def update_role(role_id: int, body: RoleIn, request: Request,
     return _role_out(db, role)
 
 
+@router.delete("/roles/{role_id}", status_code=204)
+def delete_role(role_id: int, request: Request, p: Principal = Depends(require(Permission.ROLE_MANAGE)),
+                db: Session = Depends(get_db)) -> None:
+    role = db.get(Role, role_id)
+    if role is None:
+        raise HTTPException(404, "Role not found")
+    if role.is_system:
+        raise HTTPException(409, "System roles cannot be deleted")
+    if role.users:
+        raise HTTPException(409, f"Role is assigned to {len(role.users)} user(s); reassign them first")
+    audit.record(db, "role.deleted", actor=p.user, request=request, target_type="role", target_id=role.id,
+                 details={"name": role.name})
+    db.delete(role)
+    db.commit()
+
+
 class UserOut(BaseModel):
     id: int
     username: str
@@ -99,13 +115,15 @@ class UserOut(BaseModel):
     locked: bool
     roles: list[str]
     last_login_at: datetime | None
+    auth_source: str = "local"
+    sso_groups: list[str] = []
 
 
 def _user_out(u: User) -> UserOut:
     return UserOut(id=u.id, username=u.username, email=u.email, display_name=u.display_name,
                    is_active=u.is_active, is_local=u.is_local, mfa_enabled=u.totp_enabled,
                    locked=u.locked_until is not None, roles=sorted(r.name for r in u.roles),
-                   last_login_at=u.last_login_at)
+                   last_login_at=u.last_login_at, auth_source=u.auth_source or "local", sso_groups=u.sso_groups or [])
 
 
 @router.get("/users", response_model=list[UserOut])
@@ -163,6 +181,8 @@ def set_user_roles(user_id: int, body: UserRolesIn, request: Request,
         raise HTTPException(404, "User not found")
     if user.id == p.user.id:
         raise HTTPException(409, "You cannot change your own roles")
+    if not user.is_local:
+        raise HTTPException(409, "Roles of SSO users come from group → role mappings (Settings → Identity & SSO)")
     roles = _check_escalation(db, p, body.role_ids)
     before = sorted(r.name for r in user.roles)
     user.roles = roles

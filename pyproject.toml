@@ -33,6 +33,7 @@ dependencies = [
   "defusedxml>=0.7.1",
   "python-multipart>=0.0.12",
   "xhtml2pdf>=0.2.16",
+  "python3-saml>=1.16",
 ]
 
 [project.optional-dependencies]

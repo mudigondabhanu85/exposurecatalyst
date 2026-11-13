@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, Table, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Table, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from exposurecatalyst.db.base import Base, utcnow
@@ -25,6 +25,10 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(255))  # NULL for SSO-only users
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_local: Mapped[bool] = mapped_column(Boolean, default=True)
+    auth_source: Mapped[str] = mapped_column(String(16), default="local")  # local | saml | scim
+    external_id: Mapped[str | None] = mapped_column(String(255))  # SCIM externalId (SailPoint identity)
+    scim_id: Mapped[str | None] = mapped_column(String(36), unique=True)
+    sso_groups: Mapped[list[str]] = mapped_column(JSON, default=list)  # from SAML attribute or SCIM groups
     totp_secret_enc: Mapped[str | None] = mapped_column(Text)  # Fernet-encrypted
     totp_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
     totp_last_counter: Mapped[int | None] = mapped_column(Integer)  # replay protection

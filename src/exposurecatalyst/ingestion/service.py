@@ -144,4 +144,7 @@ def tick(settings: Settings, session_factory: sessionmaker[Session],
                     for s in db.scalars(select(SourceState))}
     for name in due:
         run_source(name, triggers.get(name, "scheduled"), settings, session_factory, factory)
+    from exposurecatalyst.alerts.engine import run as run_alerts
+
+    run_alerts(settings, session_factory)  # evaluate rules against what just changed; deliver due alerts
     return due
