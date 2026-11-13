@@ -6,21 +6,23 @@ import { useAuth } from "../auth";
 import { InfoTip } from "../help";
 import { Forbidden } from "../components/StatusScreen";
 import IntegrationsSettings from "./Integrations";
+import SsoSettings from "./Sso";
+import AlertsSettings from "./Alerts";
 import { EmptyState, ErrorNote, HealthBadge, PageHeader } from "../components/ui";
 
 interface Role { id: number; name: string; description: string | null; is_system: boolean; permissions: string[]; user_count: number }
 interface Matrix { permissions: { id: string; description: string }[]; roles: Role[] }
-interface UserRow { id: number; username: string; email: string | null; display_name: string | null; is_active: boolean; is_local: boolean; mfa_enabled: boolean; locked: boolean; roles: string[]; last_login_at: string | null }
+interface UserRow { id: number; username: string; email: string | null; display_name: string | null; is_active: boolean; is_local: boolean; mfa_enabled: boolean; locked: boolean; roles: string[]; last_login_at: string | null; auth_source: string; sso_groups: string[] }
 interface JobRun { id: number; source: string; trigger: string; started_at: string; finished_at: string | null; status: string; records: number; error: string | null }
 
 const SUBTABS: { to: string; label: string; perm: string; phase?: number }[] = [
-  { to: "sso", label: "Identity & SSO", perm: "sso:manage", phase: 4 },
+  { to: "sso", label: "Identity & SSO", perm: "sso:manage" },
   { to: "rbac", label: "Users & RBAC", perm: "user:manage" },
   { to: "database", label: "Database", perm: "settings:manage", phase: 6 },
   { to: "integrations", label: "Integrations", perm: "integration:manage" },
   { to: "smtp", label: "SMTP", perm: "settings:manage" },
   { to: "sources", label: "CVE Sources", perm: "source:manage" },
-  { to: "alerts", label: "Alerts & Scheduling", perm: "settings:manage", phase: 4 },
+  { to: "alerts", label: "Alerts & Scheduling", perm: "settings:manage" },
   { to: "ai", label: "AI Providers", perm: "ai:manage", phase: 5 },
 ];
 
@@ -47,6 +49,8 @@ export default function SettingsPage() {
           <Route path="rbac" element={can("user:manage") ? <RbacSettings /> : <Forbidden />} />
           <Route path="smtp" element={can("settings:manage") ? <SmtpSettings /> : <Forbidden />} />
           <Route path="integrations" element={can("integration:manage") ? <IntegrationsSettings /> : <Forbidden />} />
+          <Route path="sso" element={can("sso:manage") ? <SsoSettings /> : <Forbidden />} />
+          <Route path="alerts" element={can("settings:manage") ? <AlertsSettings /> : <Forbidden />} />
           {SUBTABS.filter((t) => t.phase).map((t) => (
             <Route key={t.to} path={t.to} element={can(t.perm) ? (
               <><PageHeader title={t.label} helpId="help-center" /><EmptyState title={`${t.label} arrives in Phase ${t.phase}`} why="This settings area is part of the delivery plan and will include a step-by-step setup wizard with Test validation at each step." /></>
@@ -159,6 +163,8 @@ function RbacSettings() {
             <tr key={u.id} className="border-t border-ec-surface-alt">
               <td className="td"><div className="font-medium">{u.username}</div><div className="text-xs text-ec-slate">{u.email}</div></td>
               <td className="td">
+                {!u.is_local ? (<div>{u.roles.join(", ") || <span className="text-red-800">No access (no mapped group)</span>}
+                  <div className="text-xs text-ec-slate" title="Roles come from group → role mappings (Settings → Identity & SSO)">via groups: {u.sso_groups.join(", ") || "—"}</div></div>) : (
                 <details>
                   <summary className="cursor-pointer">{u.roles.join(", ") || "No roles"}</summary>
                   <form className="mt-2 space-y-1" onSubmit={(e) => { e.preventDefault(); setRoles.mutate({ id: u.id, roles: new FormData(e.currentTarget).getAll("r").map(String) }); }}>
@@ -167,10 +173,10 @@ function RbacSettings() {
                     ))}
                     <button className="btn-secondary" disabled={u.id === me?.id}>Save roles</button>
                   </form>
-                </details>
+                </details>)}
               </td>
               <td className="td">{u.mfa_enabled ? "Enrolled" : "—"}</td>
-              <td className="td">{u.is_local ? "Yes" : "SSO"}</td>
+              <td className="td">{u.is_local ? "Yes" : u.auth_source.toUpperCase()}</td>
               <td className="td text-xs">{fmtDateTime(u.last_login_at)}</td>
               <td className="td">{u.locked && <button className="btn-secondary" onClick={() => unlock.mutate(u.id)}>Unlock</button>}</td>
             </tr>))}
@@ -202,7 +208,7 @@ function RbacSettings() {
           </tbody>
         </table>
       </div>
-      {can("role:manage") && <p className="mt-2 text-xs text-ec-slate">* custom role. Custom role editing UI ships with Phase 4; the API (<code>POST/PUT /api/admin/roles</code>) is available now.</p>}
+      {can("role:manage") && matrix.data && <RoleEditor permissions={matrix.data.permissions} roles={matrix.data.roles.filter((r) => !r.is_system)} onChange={invalidate} />}
     </>
   );
 }
@@ -249,5 +255,41 @@ function SmtpSettings() {
         </form>
       )}
     </>
+  );
+}
+
+function RoleEditor({ permissions, roles, onChange }: { permissions: { id: string; description: string }[]; roles: Role[]; onChange: () => void }) {
+  const [editing, setEditing] = useState<Role | "new" | null>(null);
+  const save = useMutation({
+    mutationFn: (body: { name: string; description: string; permissions: string[] }) =>
+      editing && editing !== "new" ? api(`/api/admin/roles/${editing.id}`, { method: "PUT", body }) : api("/api/admin/roles", { method: "POST", body }),
+    onSuccess: () => { setEditing(null); onChange(); },
+  });
+  const del = useMutation({ mutationFn: (id: number) => api(`/api/admin/roles/${id}`, { method: "DELETE" }), onSuccess: onChange });
+  const cur = editing && editing !== "new" ? editing : undefined;
+  return (
+    <section className="card mt-6">
+      <div className="mb-2 flex items-center justify-between"><h2 className="font-heading font-bold">Custom roles</h2><button className="btn-primary" onClick={() => setEditing("new")}>New role</button></div>
+      <p className="mb-3 text-xs text-ec-slate">* marks custom roles in the matrix. Keep segregation of duties: avoid combining <code>advisory:approve</code> with <code>advisory:create</code> in one role.</p>
+      <ErrorNote error={save.error ?? del.error} />
+      <ul className="mb-3 space-y-1 text-sm">{roles.map((r) => (
+        <li key={r.id} className="flex items-center gap-2"><strong>{r.name}</strong><span className="text-xs text-ec-slate">{r.permissions.length} permission(s) · {r.user_count} user(s)</span>
+          <button className="text-xs underline" onClick={() => setEditing(r)}>Edit</button>
+          <button className="text-xs text-red-800 underline" onClick={() => window.confirm(`Delete role ${r.name}?`) && del.mutate(r.id)}>Delete</button></li>))}
+        {roles.length === 0 && <li className="text-ec-slate">No custom roles yet.</li>}</ul>
+      {editing && (
+        <form key={cur?.id ?? "new"} className="space-y-3 rounded-md border border-ec-border p-3" onSubmit={(e) => { e.preventDefault(); const fd = new FormData(e.currentTarget);
+          save.mutate({ name: String(fd.get("name")), description: String(fd.get("desc") ?? ""), permissions: fd.getAll("perm").map(String) }); }}>
+          <div className="grid gap-3 md:grid-cols-2">
+            <div><label className="label" htmlFor="rn">Role name</label><input id="rn" name="name" className="input w-full" required minLength={2} defaultValue={cur?.name} /></div>
+            <div><label className="label" htmlFor="rd">Description</label><input id="rd" name="desc" className="input w-full" defaultValue={cur?.description ?? ""} /></div>
+          </div>
+          <fieldset className="grid gap-1 md:grid-cols-2"><legend className="label">Permissions</legend>
+            {permissions.map((p) => <label key={p.id} className="flex items-start gap-2 text-xs"><input type="checkbox" name="perm" value={p.id} defaultChecked={cur?.permissions.includes(p.id)} /><span><code>{p.id}</code> — {p.description}</span></label>)}
+          </fieldset>
+          <div className="flex gap-2"><button className="btn-primary">Save role</button><button type="button" className="btn-secondary" onClick={() => setEditing(null)}>Cancel</button></div>
+        </form>
+      )}
+    </section>
   );
 }

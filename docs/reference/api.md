@@ -51,6 +51,13 @@ Service accounts and API tokens for automation are planned for a later phase.
 | `GET /api/integrations/catalog` · `GET/POST /api/integrations` · `PATCH/DELETE /api/integrations/{id}` · `POST …/{id}/test` | `integration:manage` | Connectors (secrets write-only) |
 | `GET /api/cves/{cve_id}/assets` · `POST …/assets/refresh` | `cve:view` / `cve:refresh` | Affected assets across integrations (refresh bypasses the cache) |
 | `POST /api/advisories/{id}/assets/pull` `{force}` | `advisory:create` | Pull integration findings into a draft advisory |
+| `GET /api/auth/sso` · `GET /api/saml/metadata` · `GET /api/auth/saml/login` · `POST /api/auth/saml/acs` | public | SSO status, SP metadata download, SP-initiated login, assertion consumer |
+| `GET/PUT /api/settings/sso/saml` · `POST …/saml/metadata` | `sso:manage` | SAML configuration, IdP metadata import (URL or XML) |
+| `GET/POST/DELETE /api/settings/sso/mappings` | `sso:manage` (+ `role:manage` to change) | Group → role mappings and sync status |
+| `GET/POST/DELETE /api/settings/scim/tokens` | `sso:manage` (+ `user:manage` to create) | SCIM bearer tokens (shown once) |
+| `/scim/v2/{ServiceProviderConfig, ResourceTypes, Schemas, Users, Groups}` | SCIM bearer token | SCIM 2.0 provisioning (RFC 7644) |
+| `GET/POST /api/alerts` · `PUT/DELETE /api/alerts/{id}` · `POST …/{id}/run` · `GET …/{id}/events` | `settings:manage` | Alert rules |
+| `DELETE /api/admin/roles/{id}` | `role:manage` | Delete a custom role (unassigned only) |
 | `GET /metrics` | network-restricted | Prometheus metrics |
 
 ## Errors

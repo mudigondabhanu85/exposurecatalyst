@@ -38,7 +38,7 @@ from diagrams.saas.identity import Okta
 
 NAME = "aws_high_level"
 TITLE = "ExposureCatalyst — AWS Reference Architecture"
-SUBTITLE = "Production deployment · single region · Multi-AZ · v0.3"
+SUBTITLE = "Production deployment · single region · Multi-AZ · v0.4"
 
 
 def e(kind: str, text: str, constraint: bool = True, minlen: int = 1) -> Edge:
@@ -114,7 +114,7 @@ def build(out_dir: Path, fmt: str, dpi: int) -> None:
             ai_ext = InternetAlt1(label("External AI vendors", "Allowlisted providers only"), **node_attrs())
 
         with Cluster("legend", graph_attr={**GROUP["legend"], "label": ""}):
-            legend = Node(legend_html(), shape="plaintext", fontname="Helvetica", fontsize="11")
+            legend = Node(legend_html(), shape="plaintext", fontname="Helvetica", fontsize="11", fixedsize="false", height="0", width="0")
 
         # ---- Flows -------------------------------------------------------------------------------
         users >> e("sync", "① DNS lookup") >> r53

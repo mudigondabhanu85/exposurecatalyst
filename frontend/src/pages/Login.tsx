@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { api, ApiError, type Me } from "../api";
@@ -14,6 +15,8 @@ export default function LoginPage() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [params] = useSearchParams();
+  const sso = useQuery({ queryKey: ["sso-status"], queryFn: () => api<{ saml_enabled: boolean; login_url: string }>("/api/auth/sso") });
+  const ssoError = params.get("sso_error");
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -42,9 +45,12 @@ export default function LoginPage() {
         {/* Full lockup incl. tagline; ≥160 px wide per brand minimum. The h1 is for screen readers. */}
         <img src="/brand/svg/logo-light.svg" alt="ExposureCatalyst" className="mx-auto mb-6 w-64 max-w-full" />
         <h1 id="login-title" className="sr-only">Sign in to ExposureCatalyst</h1>
-        <button type="button" disabled className="btn-secondary mb-4 w-full justify-center" title="Okta SAML sign-in arrives in Phase 4">
-          Sign in with Okta (coming soon)
-        </button>
+        {ssoError && <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">Single sign-on failed: {ssoError}</p>}
+        {sso.data?.saml_enabled ? (
+          <a className="btn-primary mb-4 w-full justify-center" href={`${sso.data.login_url}?next=${encodeURIComponent(params.get("next") ?? "/cves")}`}>Sign in with Okta</a>
+        ) : (
+          <button type="button" disabled className="btn-secondary mb-4 w-full justify-center" title="An administrator has not enabled Okta sign-in yet">Sign in with Okta (not configured)</button>
+        )}
         <div className="mb-4 flex items-center gap-2 text-xs text-ec-slate"><span className="h-px flex-1 bg-ec-border" />local account<InfoTip k="local_account" /><span className="h-px flex-1 bg-ec-border" /></div>
         <label className="label" htmlFor="u">Username</label>
         <input id="u" className="input mb-3 w-full" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />

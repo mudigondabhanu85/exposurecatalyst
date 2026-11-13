@@ -22,6 +22,23 @@ erDiagram
     advisories ||--o{ advisory_assets : assets
     advisories ||--o{ advisory_deliveries : "sends / exports"
     users ||--o{ advisories : authors
+    roles ||--o{ group_role_mappings : "granted via"
+    scim_groups ||--o{ scim_group_members : members
+    users ||--o{ scim_group_members : "member of"
+    alert_rules ||--o{ alert_events : matches
+    group_role_mappings { int id PK
+      string group_name
+      int role_id FK }
+    scim_groups { string id PK "uuid"
+      string display_name UK }
+    alert_rules { int id PK
+      json criteria
+      json channels
+      text webhooks_enc "Fernet"
+      datetime cursor_at }
+    alert_events { int id PK
+      string cve_id
+      string status }
     integrations ||--o{ integration_cve_checks : "checked CVEs"
     integrations ||--o{ asset_findings : "reports"
     integrations ||--o{ integration_vuln_map : "CVE → vendor IDs"
@@ -166,6 +183,13 @@ erDiagram
 | `integration_cve_checks` | | One row per (integration, CVE): status, asset count, truncated flag, error. Drives *No* vs *Not Integrated* | system |
 | `asset_findings` | | Normalized affected assets per (integration, CVE), replaced on each check (**Confidential**) | connectors |
 | `integration_vuln_map` | | CVE → vendor vulnerability ID (Qualys QIDs) | connectors |
+| `users.auth_source` / `sso_groups` / `scim_id` / `external_id` | | `local`/`saml`/`scim`. Groups from SAML or SCIM drive roles. SCIM resource ID and SailPoint identity ID | IdP / SCIM |
+| `group_role_mappings` | | Group name → role. The only source of SSO users' roles | admin |
+| `saml_requests` / `saml_assertions` | | Outstanding AuthnRequest IDs (single use, 10 min) / consumed assertion IDs (replay cache) | system |
+| `scim_tokens.token_hash` | string(64) | SHA-256 of the bearer token (**Restricted**). The token is shown once | admin |
+| `scim_groups` / `scim_group_members` | | SCIM groups and memberships pushed by SailPoint | SCIM |
+| `alert_rules` | | Criteria, recipients, channels, encrypted webhooks, mode, throttle/digest, cursor | admin |
+| `alert_events` | | One per (rule, CVE): reason, matched/delivered time, status | system |
 | `distribution_lists` | | Named reusable To/CC/BCC sets | analyst |
 | `audit_log.prev_hash` / `hash` | string(64) | Hash chain: `sha256(prev_hash + canonical_json(row))` | system |
 

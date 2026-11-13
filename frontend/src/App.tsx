@@ -21,6 +21,9 @@ export function helpIdFor(path: string): string {
   if (/^\/advisories\/\d+/.test(path)) return "advisory-editor";
   if (path.startsWith("/advisories")) return "advisories";
   if (path.startsWith("/settings/smtp")) return "settings-smtp";
+  if (path.startsWith("/settings/sso")) return "settings-sso";
+  if (path.startsWith("/settings/alerts")) return "settings-alerts";
+  if (path.startsWith("/settings/integrations")) return "settings-integrations";
   if (path.startsWith("/news")) return "news";
   if (path.startsWith("/settings/rbac")) return "settings-rbac";
   if (path.startsWith("/settings")) return "settings-sources";

@@ -88,6 +88,20 @@ In AWS, the Network Firewall domain allowlist enforces the same policy at the ne
 | Malicious or oversized responses | `defusedxml` for Qualys XML. Result cap `EXCAT_CONNECTOR_MAX_ASSETS` with truncation flag. Column-length truncation. Text-only rendering |
 | One tool failing silently | Per-check status. A failed lookup is never reported as *No* (shown as *Not Integrated* with the error) |
 
+## Identity controls (Phase 4)
+
+| Risk | Control |
+|---|---|
+| Forged or modified assertions | python3-saml strict mode. Signed assertions required. SHA-1 and deprecated algorithms rejected. XML schema validation |
+| Replay / CSRF-style login injection | Stored AuthnRequest ID must equal `InResponseTo` (single use, 10 min). Assertion-ID cache until `NotOnOrAfter`. IdP-initiated sign-in off by default |
+| Host-header / URL confusion | Destination, Recipient and ACS computed from `EXCAT_PUBLIC_URL`, never from request headers |
+| Open redirect via RelayState / `next` | Internal paths only (`/…`, no `//`, scheme or backslash). Otherwise `/cves` |
+| Account takeover of break-glass accounts | SAML and SCIM identities can never bind to a local account |
+| Privilege creep | SSO roles come only from group mappings. Unmapped users have no access. Mapping changes revoke affected sessions. You can't map a role whose permissions you lack |
+| SCIM token theft | Bearer token shown once, stored as SHA-256, revocable, last-used tracked. SCIM never uses cookie sessions |
+| Strict cookies after a cross-site IdP POST | Same-origin meta-refresh hop. No inline script, so CSP stays strict |
+| Alert webhooks as exfiltration channel | Host allowlist (Slack and Teams hosts only). Encrypted at rest. Never returned |
+
 ## Secrets management
 
 - `EXCAT_ENCRYPTION_KEY` (Fernet) encrypts secrets stored in the DB. In AWS it's delivered from Secrets Manager

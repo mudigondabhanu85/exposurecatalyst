@@ -3,6 +3,26 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [0.4.0] — 2026-11-13 — Phase 4: identity, governance and alerts
+
+### Added
+- **Okta SAML 2.0 SSO**: strict validation, signed AuthnRequests, stored request IDs matched to
+  `InResponseTo`, assertion replay cache, IdP-initiated off by default, JIT provisioning, downloadable SP
+  metadata, IdP metadata import (URL restricted to Okta domains, or XML).
+- **SailPoint**: group → role mapping (the only source of SSO users' roles) with sync status, and a
+  **SCIM 2.0** server (Users and Groups with filter, PATCH and soft delete) with hashed bearer tokens.
+- **Alerts & scheduling**: rules on severity, CVSS, EPSS, KEV added, vendor/product watchlist, keywords and
+  affected assets. Immediate (throttled) or digest delivery by email, Slack or Teams. Evaluated every
+  scheduler tick.
+- Custom role editor. Setup wizard for Okta and SailPoint. Identity flow diagram. Sequence diagrams (SAML
+  sign-in, hourly fetch, advisory send, alert trigger). Okta, SailPoint and alerts guides. RBAC docs.
+
+### Fixed
+- The "every API route requires authentication" test didn't see routes nested by FastAPI 0.16x, so it
+  checked almost nothing. It now walks nested routers and asserts coverage (> 80 routes). No unprotected route
+  was found.
+- Diagram legends overflowed their boxes (`fixedsize` default from the diagrams library).
+
 ## [0.3.0] — 2026-11-13 — Phase 3: integrations
 
 ### Added

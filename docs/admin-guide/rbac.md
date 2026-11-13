@@ -26,9 +26,25 @@ Phase 2 also enforces that the approver of an advisory can't be its author.
 - You can't change your own roles or deactivate yourself.
 - Changing someone's roles **signs them out everywhere**, so new permissions apply immediately.
 
+## SailPoint / Okta group mapping
+
+Users who sign in with Okta (SAML) or are provisioned by SailPoint (SCIM) get roles **only** through
+group → role mappings in **Settings → Identity & SSO** (`sso:manage` and `role:manage`):
+
+- A user's groups come from the SAML `groups` attribute, or from SCIM group membership for SCIM-provisioned
+  users.
+- A user whose groups map to no role **cannot sign in**.
+- Changing a mapping recomputes all SSO users' roles at once and revokes the sessions of anyone whose roles
+  changed.
+- Manual role assignment is refused for SSO users (`409`), so the mapping stays the single source of truth.
+- You can only map a role whose permissions you hold yourself.
+
+Example mappings and SoD guidance are in the [SailPoint guide](sailpoint.md#group-role-mapping-examples).
+
 ## Local accounts and break-glass
 
-Local accounts are meant for break-glass use; SSO arrives in Phase 4. Create the first one with the CLI:
+Local accounts are for break-glass use. Day-to-day access should go through [Okta SSO](okta-saml.md).
+Create the first local account with the CLI:
 
 ```bash
 exposurecatalyst create-admin --username breakglass --email secops@example.com
@@ -47,8 +63,10 @@ messages are generic, so they don't reveal whether a username exists. Per-IP rat
 
 ## Custom roles
 
-`POST /api/admin/roles` and `PUT /api/admin/roles/{id}` need `role:manage`. The editing UI ships in Phase 4,
-together with SailPoint group → role mapping.
+**Settings → Users & RBAC → Custom roles** (`role:manage`): create a role, tick its permissions, edit or
+delete it. System roles are read-only. A role still assigned to users can't be deleted. For example, a
+*Vulnerability Manager* role with `cve:view`, `cve:refresh` and `advisory:approve`.
+API: `POST/PUT/DELETE /api/admin/roles`.
 
 ## Audit
 

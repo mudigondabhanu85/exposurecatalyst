@@ -74,8 +74,13 @@ nav:
       - Users & RBAC: admin-guide/rbac.md
       - CVE ingestion sources: admin-guide/ingestion-sources.md
       - SMTP & email delivery: admin-guide/smtp.md
+      - Okta SAML single sign-on: admin-guide/okta-saml.md
+      - SailPoint provisioning & mapping: admin-guide/sailpoint.md
+      - Alerts & scheduling: admin-guide/alerts.md
   - Architecture:
       - High-level AWS architecture: architecture/high-level.md
+      - Identity flow: architecture/identity-flow.md
+      - Sequence diagrams: architecture/sequences.md
       - Diagram standards & pipeline: architecture/diagram-standards.md
       - Data model: architecture/data-model.md
       - Decision records:
@@ -110,6 +115,8 @@ nav:
       - help/advisory-templates.md
       - help/settings-smtp.md
       - help/settings-integrations.md
+      - help/settings-sso.md
+      - help/settings-alerts.md
       - help/news.md
       - help/settings-sources.md
       - help/settings-rbac.md

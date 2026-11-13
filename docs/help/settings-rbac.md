@@ -26,7 +26,7 @@ button is never the only protection.
 <!-- requires: role:manage -->
 ### Custom roles (Super Admin)
 
-Use **New role** to combine permissions, for example a "Vulnerability Manager" with `cve:*` plus
+Under **Custom roles**, use **New role** to combine permissions, for example a "Vulnerability Manager" with `cve:*` plus
 `advisory:approve`. Keep segregation of duties: one person shouldn't both approve and send the same
 advisory.
 <!-- /requires -->
@@ -35,7 +35,7 @@ advisory.
 
 | Field | Meaning |
 |---|---|
-| Local | Account authenticates with a password stored here (break-glass). SSO users arrive in Phase 4. |
+| Local | *Yes*: the account signs in with a password stored here (break-glass). *SAML* / *SCIM*: an SSO account whose roles come from group mappings ("via groups") and can't be edited here |
 | MFA | TOTP is enrolled. Local admins must enrol before using admin pages. |
 | Locked | The account is temporarily locked after repeated failed logins. |
 
