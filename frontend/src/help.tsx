@@ -55,12 +55,15 @@ function HelpDrawer({ id, onClose }: { id: string; onClose: () => void }) {
       <div className="absolute inset-0 bg-slate-900/30" aria-hidden="true" onClick={onClose} />
       <div ref={panel} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}
            className="relative z-50 flex h-full w-full max-w-xl flex-col bg-white shadow-xl focus:outline-none">
-        <div className="flex items-center justify-between border-b border-ec-border px-5 py-3">
-          <h2 id={titleId} className="text-lg font-semibold">{q.data?.title ?? "Help"}</h2>
-          <button className="btn-secondary" onClick={onClose} aria-label="Close help">✕</button>
+        <div className="flex items-center justify-between border-b-2 border-ec-orange bg-ec-navy px-5 py-3">
+          <h2 id={titleId} className="flex items-center gap-2 font-heading text-lg font-bold text-white">
+            <img src="/brand/svg/mark-simple-dark.svg" alt="" aria-hidden="true" className="h-6 w-6" />
+            {q.data?.title ?? "Help"}
+          </h2>
+          <button className="rounded-sm px-2 py-1 text-white hover:bg-white/10 focus-visible:outline-ec-orange-bright" onClick={onClose} aria-label="Close help">✕</button>
         </div>
         <div className="flex-1 overflow-y-auto px-5 py-4">
-          {q.isLoading && <p className="text-sm text-slate-500">Loading…</p>}
+          {q.isLoading && <p className="text-sm text-ec-slate">Loading…</p>}
           {q.isError && <p className="text-sm text-red-700">This help topic is unavailable for your role.</p>}
           {q.data && (
             <>
@@ -82,7 +85,7 @@ export function HelpButton({ id }: { id: string }) {
   const { openHelp } = useHelp();
   return (
     <button type="button" onClick={() => openHelp(id)} aria-label="Open help for this page" title="Help (?)"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-ec-border bg-white text-sm font-bold text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-ec-orange">
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-ec-navy bg-white font-heading text-sm font-bold text-ec-navy hover:bg-ec-navy hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-ec-orange">
       ?
     </button>
   );
@@ -107,12 +110,12 @@ export function InfoTip({ k, text }: { k?: string; text?: string }) {
       <button type="button" aria-label={`About ${tip?.label ?? "this field"}`} aria-describedby={open ? id : undefined}
               onFocus={() => setOpen(true)} onBlur={() => setOpen(false)}
               onKeyDown={(e) => e.key === "Escape" && setOpen(false)}
-              className="rounded-full text-xs leading-none text-slate-400 hover:text-ec-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-ec-orange">
+              className="rounded-full text-xs leading-none text-ec-slate hover:text-ec-orange focus:outline-none focus-visible:ring-2 focus-visible:ring-ec-orange">
         ⓘ
       </button>
       {open && (
         <span role="tooltip" id={id}
-              className="absolute left-1/2 top-5 z-30 w-64 -translate-x-1/2 rounded-md bg-slate-900 px-3 py-2 text-xs font-normal normal-case tracking-normal text-white shadow-lg">
+              className="absolute left-1/2 top-5 z-30 w-64 -translate-x-1/2 rounded-sm bg-ec-navy px-3 py-2 text-xs font-normal normal-case tracking-normal text-white shadow-lg">
           {body}
         </span>
       )}

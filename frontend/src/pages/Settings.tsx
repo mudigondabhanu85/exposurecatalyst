@@ -4,6 +4,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, fmtDateTime, type SourceInfo, type SourcesResp } from "../api";
 import { useAuth } from "../auth";
 import { InfoTip } from "../help";
+import { Forbidden } from "../components/StatusScreen";
 import { EmptyState, ErrorNote, HealthBadge, PageHeader } from "../components/ui";
 
 interface Role { id: number; name: string; description: string | null; is_system: boolean; permissions: string[]; user_count: number }
@@ -31,7 +32,7 @@ export default function SettingsPage() {
         <ul className="space-y-1">
           {visible.map((t) => (
             <li key={t.to}>
-              <NavLink to={t.to} className={({ isActive }) => `block rounded-md px-3 py-2 text-sm ${isActive ? "bg-ec-navy text-white" : "text-slate-700 hover:bg-slate-100"}`}>
+              <NavLink to={t.to} className={({ isActive }) => `block rounded-md px-3 py-2 text-sm ${isActive ? "bg-ec-navy text-white" : "text-ec-slate hover:bg-ec-surface-alt"}`}>
                 {t.label}{t.phase && <span className="ml-1 text-xs opacity-70">(Phase {t.phase})</span>}
               </NavLink>
             </li>
@@ -54,7 +55,7 @@ export default function SettingsPage() {
   );
 }
 
-const Forbidden = () => <EmptyState title="Not permitted" why="Your role does not grant access to this settings area." />;
+
 
 function SourceRow({ s }: { s: SourceInfo }) {
   const qc = useQueryClient();
@@ -65,7 +66,7 @@ function SourceRow({ s }: { s: SourceInfo }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["sources"] }),
   });
   return (
-    <tr className="border-t border-slate-100">
+    <tr className="border-t border-ec-surface-alt">
       <td className="td font-medium">{s.label}</td>
       <td className="td"><HealthBadge health={s.health} /></td>
       <td className="td"><input type="checkbox" aria-label={`Enable ${s.label}`} checked={enabled} onChange={(e) => setEnabled(e.target.checked)} /></td>
@@ -107,11 +108,11 @@ function SourcesSettings() {
         <table className="min-w-full text-sm">
           <thead className="bg-ec-surface-alt"><tr><th className="th">Started</th><th className="th">Source</th><th className="th">Trigger</th><th className="th">Status</th><th className="th">Records</th><th className="th">Error</th></tr></thead>
           <tbody>{runs.data?.map((r) => (
-            <tr key={r.id} className="border-t border-slate-100"><td className="td">{fmtDateTime(r.started_at)}</td><td className="td">{r.source}</td><td className="td">{r.trigger}</td>
+            <tr key={r.id} className="border-t border-ec-surface-alt"><td className="td">{fmtDateTime(r.started_at)}</td><td className="td">{r.source}</td><td className="td">{r.trigger}</td>
               <td className="td">{r.status}</td><td className="td">{r.records}</td><td className="td text-xs text-red-800">{r.error}</td></tr>))}
           </tbody>
         </table>
-        {runs.data?.length === 0 && <p className="p-4 text-sm text-slate-500">No runs yet — start the scheduler or click Refresh now.</p>}
+        {runs.data?.length === 0 && <p className="p-4 text-sm text-ec-slate">No runs yet — start the scheduler or click Refresh now.</p>}
       </div>
     </>
   );
@@ -152,8 +153,8 @@ function RbacSettings() {
         <table className="min-w-full text-sm">
           <thead className="bg-ec-surface-alt"><tr><th className="th">User</th><th className="th">Roles</th><th className="th"><span className="inline-flex gap-1">MFA<InfoTip k="mfa" /></span></th><th className="th"><span className="inline-flex gap-1">Local<InfoTip k="local_account" /></span></th><th className="th">Last login</th><th className="th" /></tr></thead>
           <tbody>{users.data?.map((u) => (
-            <tr key={u.id} className="border-t border-slate-100">
-              <td className="td"><div className="font-medium">{u.username}</div><div className="text-xs text-slate-500">{u.email}</div></td>
+            <tr key={u.id} className="border-t border-ec-surface-alt">
+              <td className="td"><div className="font-medium">{u.username}</div><div className="text-xs text-ec-slate">{u.email}</div></td>
               <td className="td">
                 <details>
                   <summary className="cursor-pointer">{u.roles.join(", ") || "No roles"}</summary>
@@ -191,14 +192,14 @@ function RbacSettings() {
           <caption className="sr-only">Roles and permissions matrix</caption>
           <thead className="bg-ec-surface-alt"><tr><th className="th">Permission</th>{matrix.data?.roles.map((r) => <th key={r.id} className="th text-center" title={r.description ?? ""}>{r.name}{!r.is_system && " *"}</th>)}</tr></thead>
           <tbody>{matrix.data?.permissions.map((p) => (
-            <tr key={p.id} className="border-t border-slate-100">
-              <th scope="row" className="td text-left font-normal"><code>{p.id}</code><div className="text-slate-500">{p.description}</div></th>
+            <tr key={p.id} className="border-t border-ec-surface-alt">
+              <th scope="row" className="td text-left font-normal"><code>{p.id}</code><div className="text-ec-slate">{p.description}</div></th>
               {matrix.data?.roles.map((r) => <td key={r.id} className="td text-center">{r.permissions.includes(p.id) ? <span aria-label="granted">✅</span> : <span aria-label="not granted" className="text-slate-300">—</span>}</td>)}
             </tr>))}
           </tbody>
         </table>
       </div>
-      {can("role:manage") && <p className="mt-2 text-xs text-slate-500">* custom role. Custom role editing UI ships with Phase 4; the API (<code>POST/PUT /api/admin/roles</code>) is available now.</p>}
+      {can("role:manage") && <p className="mt-2 text-xs text-ec-slate">* custom role. Custom role editing UI ships with Phase 4; the API (<code>POST/PUT /api/admin/roles</code>) is available now.</p>}
     </>
   );
 }

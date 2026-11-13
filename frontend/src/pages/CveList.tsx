@@ -26,7 +26,7 @@ function SourceStrip() {
         <span key={s.source} className="flex items-center gap-2 text-sm">
           <span className="font-medium">{s.label}</span>
           <HealthBadge health={s.health} title={s.last_error ?? undefined} />
-          <span className="text-xs text-slate-500">{s.last_success_at ? `ok ${fmtDateTime(s.last_success_at)}` : "never"}</span>
+          <span className="text-xs text-ec-slate">{s.last_success_at ? `ok ${fmtDateTime(s.last_success_at)}` : "never"}</span>
         </span>
       ))}
       <span className="flex items-center gap-1 text-xs">
@@ -170,13 +170,13 @@ export default function CveListPage() {
                 <th className="th" aria-sort={ariaSort("last_modified_at")}><button onClick={() => sortBy("last_modified_at")}>Modified{sortMark("last_modified_at")}</button></th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-ec-surface-alt">
               {data?.items.map((c) => (
                 <tr key={c.cve_id} className="hover:bg-ec-surface-alt">
                   <td className="td whitespace-nowrap font-mono"><Link className="link" to={`/cves/${c.cve_id}`}>{c.cve_id}</Link></td>
-                  <td className="td max-w-md"><div className="line-clamp-2">{c.title ?? "—"}</div><div className="text-xs text-slate-500">{c.vendors.join(", ")}</div></td>
+                  <td className="td max-w-md"><div className="line-clamp-2">{c.title ?? "—"}</div><div className="text-xs text-ec-slate">{c.vendors.join(", ")}</div></td>
                   <td className="td"><SeverityBadge severity={c.severity} /></td>
-                  <td className="td whitespace-nowrap">{c.cvss_score?.toFixed(1) ?? "—"} <span className="text-xs text-slate-500">{c.cvss_version ? `v${c.cvss_version}` : ""}</span></td>
+                  <td className="td whitespace-nowrap">{c.cvss_score?.toFixed(1) ?? "—"} <span className="text-xs text-ec-slate">{c.cvss_version ? `v${c.cvss_version}` : ""}</span></td>
                   <td className="td whitespace-nowrap">{pct(c.epss_score)}</td>
                   <td className="td space-x-1 whitespace-nowrap">{c.kev && <KevBadge due={c.kev_due_date} />}{c.exploit_available && <span className="rounded bg-slate-800 px-2 py-0.5 text-xs font-semibold text-white">Exploit</span>}</td>
                   <td className="td whitespace-nowrap">{fmtDate(c.published_at)}</td>

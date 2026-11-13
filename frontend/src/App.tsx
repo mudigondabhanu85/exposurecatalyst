@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
 import { useAuth } from "./auth";
@@ -10,6 +10,7 @@ import CveDetailPage from "./pages/CveDetail";
 import SettingsPage from "./pages/Settings";
 import HelpCenterPage from "./pages/HelpCenter";
 import { AdvisoriesPage, NewsPage } from "./pages/Placeholders";
+import { LoadingScreen, NotFound } from "./components/StatusScreen";
 
 /** Route → help topic, used by the global "?" shortcut. */
 export function helpIdFor(path: string): string {
@@ -42,8 +43,9 @@ function useShortcuts() {
   }, [openHelp, nav, loc.pathname]);
 }
 
+// Active tab: white text + orange-bright indicator (#FF7A3D on navy = 6.7:1).
 const tab = ({ isActive }: { isActive: boolean }) =>
-  `rounded-md px-3 py-2 text-sm font-medium ${isActive ? "bg-white/15 text-white" : "text-blue-100 hover:bg-white/10 hover:text-white"}`;
+  `border-b-2 px-3 py-3 text-sm font-medium ${isActive ? "border-ec-orange-bright text-white" : "border-transparent text-ec-slate-light hover:text-white"}`;
 
 const SETTINGS_PERMS = ["source:manage", "user:manage", "integration:manage", "settings:manage", "sso:manage", "ai:manage"];
 
@@ -60,8 +62,12 @@ function Shell() {
     <div className="min-h-screen">
       <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2">Skip to content</a>
       <header className="bg-ec-navy">
-        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4 py-2">
-          <span className="text-lg font-bold text-white">ExposureCatalyst</span>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-4 px-4">
+          <Link to="/cves" className="flex shrink-0 items-center py-2" aria-label="ExposureCatalyst — CVE Intelligence">
+            {/* Wordmark at 36 px; compact widths show the simple mark (brand rule: < 64 px → mark-simple). */}
+            <img src="/brand/svg/logo-dark-wordmark.svg" alt="ExposureCatalyst" height={36} className="hidden h-9 w-auto sm:block" />
+            <img src="/brand/svg/mark-simple-dark.svg" alt="ExposureCatalyst" height={32} className="h-8 w-8 sm:hidden" />
+          </Link>
           <nav aria-label="Main" className="flex flex-wrap gap-1">
             {can("cve:view") && <NavLink to="/cves" className={tab}>CVE Intelligence</NavLink>}
             {can("cve:view") && <NavLink to="/advisories" className={tab}>Advisories</NavLink>}
@@ -69,9 +75,9 @@ function Shell() {
             {SETTINGS_PERMS.some(can) && <NavLink to="/settings" className={tab}>Settings</NavLink>}
             <NavLink to="/help" className={tab}>Help Center</NavLink>
           </nav>
-          <div className="ml-auto flex items-center gap-3 text-sm text-blue-100">
+          <div className="ml-auto flex items-center gap-3 text-sm text-ec-slate-light">
             <span title={me?.roles.join(", ")}>{me?.display_name ?? me?.username}</span>
-            <button className="rounded-md border border-blue-300/40 px-2 py-1 text-xs hover:bg-white/10" onClick={logout}>Sign out</button>
+            <button className="rounded-sm border border-ec-slate-light/50 px-2 py-1 text-xs text-white hover:bg-white/10 focus-visible:outline-ec-orange-bright" onClick={logout}>Sign out</button>
           </div>
         </div>
       </header>
@@ -84,7 +90,7 @@ function Shell() {
           <Route path="/news" element={<NewsPage />} />
           <Route path="/settings/*" element={<SettingsPage />} />
           <Route path="/help" element={<HelpCenterPage />} />
-          <Route path="*" element={<p className="text-sm text-ec-slate">Page not found.</p>} />
+          <Route path="*" element={<NotFound />} />
         </Routes>
       </main>
     </div>
@@ -94,7 +100,7 @@ function Shell() {
 export default function App() {
   const { me, loading } = useAuth();
   const loc = useLocation();
-  if (loading) return <p className="p-8 text-sm text-slate-500">Loading…</p>;
+  if (loading) return <LoadingScreen fullPage />;
   if (!me) {
     return (
       <Routes>

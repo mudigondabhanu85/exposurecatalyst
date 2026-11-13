@@ -31,14 +31,21 @@ export default function HelpCenterPage() {
 
   return (
     <>
+      <div className="mb-4 flex items-center gap-4 rounded-md bg-ec-navy px-5 py-4">
+        <img src="/brand/svg/mark-dark.svg" alt="" aria-hidden="true" className="h-16 w-16" />
+        <div>
+          <p className="font-heading text-xl font-bold text-white">ExposureCatalyst Help Center</p>
+          <p className="text-sm text-ec-slate-light">Guides, glossary and answers — filtered to your role</p>
+        </div>
+      </div>
       <PageHeader title="Help Center" helpId="help-center" subtitle="Everything you need to use ExposureCatalyst"
                   actions={<a className="btn-secondary" href="/docs/" target="_blank" rel="noopener noreferrer">Full documentation ↗</a>} />
       <div className="card mb-4">
         <label className="label" htmlFor="help-search">Search help</label>
         <input id="help-search" type="search" className="input w-full" placeholder="e.g. EPSS, refresh, unlock user" value={term} onChange={(e) => setTerm(e.target.value)} maxLength={100} />
         {results.data && (
-          <ul className="mt-3 divide-y divide-slate-100" aria-live="polite">
-            {results.data.length === 0 && <li className="py-2 text-sm text-slate-500">No matching topics.</li>}
+          <ul className="mt-3 divide-y divide-ec-surface-alt" aria-live="polite">
+            {results.data.length === 0 && <li className="py-2 text-sm text-ec-slate">No matching topics.</li>}
             {results.data.map((r) => (
               <li key={r.id} className="py-2">
                 <button className="text-left text-sm font-medium link" onClick={() => openHelp(r.id)}>{r.title}</button>

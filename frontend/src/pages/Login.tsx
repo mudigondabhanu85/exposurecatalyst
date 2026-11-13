@@ -37,14 +37,15 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-ec-navy px-4">
-      <form onSubmit={submit} className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl" aria-labelledby="login-title">
-        <h1 id="login-title" className="text-xl font-bold text-ec-navy">ExposureCatalyst</h1>
-        <p className="mb-5 text-sm text-ec-slate">Vulnerability Intelligence &amp; Advisory Platform</p>
+    <div className="flex min-h-screen items-center justify-center bg-ec-surface px-4">
+      <form onSubmit={submit} className="w-full max-w-sm rounded-md border border-ec-border bg-white p-6 shadow-sm" aria-labelledby="login-title">
+        {/* Full lockup incl. tagline; ≥160 px wide per brand minimum. The h1 is for screen readers. */}
+        <img src="/brand/svg/logo-light.svg" alt="ExposureCatalyst" className="mx-auto mb-6 w-64 max-w-full" />
+        <h1 id="login-title" className="sr-only">Sign in to ExposureCatalyst</h1>
         <button type="button" disabled className="btn-secondary mb-4 w-full justify-center" title="Okta SAML sign-in arrives in Phase 4">
           Sign in with Okta (coming soon)
         </button>
-        <div className="mb-4 flex items-center gap-2 text-xs text-slate-400"><span className="h-px flex-1 bg-slate-200" />local account<InfoTip k="local_account" /><span className="h-px flex-1 bg-slate-200" /></div>
+        <div className="mb-4 flex items-center gap-2 text-xs text-ec-slate"><span className="h-px flex-1 bg-ec-border" />local account<InfoTip k="local_account" /><span className="h-px flex-1 bg-ec-border" /></div>
         <label className="label" htmlFor="u">Username</label>
         <input id="u" className="input mb-3 w-full" autoComplete="username" value={username} onChange={(e) => setUsername(e.target.value)} required />
         <label className="label" htmlFor="p">Password</label>

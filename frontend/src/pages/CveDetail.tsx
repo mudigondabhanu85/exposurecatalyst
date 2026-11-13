@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api, fmtDate, fmtDateTime, pct, type CveDetail } from "../api";
 import { useAuth } from "../auth";
 import { InfoTip } from "../help";
+import { LoadingScreen } from "../components/StatusScreen";
 import { EmptyState, ErrorNote, KevBadge, PageHeader, SeverityBadge } from "../components/ui";
 
 interface AssetPanel { integrations_configured: boolean; total_unique_assets: number; sources: unknown[]; message: string }
@@ -13,7 +14,7 @@ function Stat({ label, tip, value, sub }: { label: string; tip: string; value: R
     <div className="card">
       <div className="label">{label}<InfoTip k={tip} /></div>
       <div className="text-2xl font-semibold">{value}</div>
-      {sub && <div className="mt-1 text-xs text-slate-500">{sub}</div>}
+      {sub && <div className="mt-1 text-xs text-ec-slate">{sub}</div>}
     </div>
   );
 }
@@ -21,7 +22,7 @@ function Stat({ label, tip, value, sub }: { label: string; tip: string; value: R
 function Prov({ cve, field }: { cve: CveDetail; field: string }) {
   const p = cve.provenance[field];
   if (!p) return null;
-  return <span className="ml-1 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium uppercase text-slate-500" title={`Source: ${p.source} · ${fmtDateTime(p.at)}`}>{p.source}</span>;
+  return <span className="ml-1 rounded bg-ec-surface-alt px-1.5 py-0.5 text-[10px] font-medium uppercase text-ec-slate" title={`Source: ${p.source} · ${fmtDateTime(p.at)}`}>{p.source}</span>;
 }
 
 const range = (p: CveDetail["products"][number]) =>
@@ -38,7 +39,7 @@ export default function CveDetailPage() {
   const c = q.data;
 
   if (q.isError) return <><PageHeader title={cveId} helpId="cve-detail" /><ErrorNote error={q.error} /></>;
-  if (!c) return <p className="text-sm text-slate-500">Loading…</p>;
+  if (!c) return <LoadingScreen />;
 
   return (
     <>
@@ -69,7 +70,7 @@ export default function CveDetailPage() {
           <section className="card">
             <h2 className="mb-2 font-semibold">Description<Prov cve={c} field="description" /></h2>
             {/* Rendered as text: upstream content is untrusted and never interpreted as HTML. */}
-            <p className="whitespace-pre-line text-sm leading-6 text-slate-700">{c.description ?? "No description yet."}</p>
+            <p className="whitespace-pre-line text-sm leading-6 text-ec-slate">{c.description ?? "No description yet."}</p>
             {c.kev_required_action && <p className="mt-3 rounded bg-red-50 p-2 text-sm text-red-900"><strong>CISA required action:</strong> {c.kev_required_action}</p>}
             <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
               <div><dt className="label">NVD status<InfoTip k="vuln_status" /></dt><dd>{c.vuln_status ?? "—"}</dd></div>
@@ -81,20 +82,20 @@ export default function CveDetailPage() {
 
           <section className="card overflow-x-auto">
             <h2 className="mb-2 font-semibold">All CVSS scores<Prov cve={c} field="cvss" /></h2>
-            {c.cvss_metrics.length === 0 ? <p className="text-sm text-slate-500">No CVSS assessments published yet.</p> : (
+            {c.cvss_metrics.length === 0 ? <p className="text-sm text-ec-slate">No CVSS assessments published yet.</p> : (
               <table className="min-w-full text-sm"><thead><tr><th className="th">Version</th><th className="th">Score</th><th className="th">Severity</th><th className="th">Assessor</th><th className="th">Vector</th></tr></thead>
                 <tbody>{c.cvss_metrics.map((m, i) => (
-                  <tr key={i} className="border-t border-slate-100"><td className="td">{m.version}</td><td className="td">{m.score ?? "—"}</td><td className="td"><SeverityBadge severity={m.severity} /></td>
-                    <td className="td">{m.source} <span className="text-xs text-slate-500">{m.type}</span></td><td className="td break-all font-mono text-xs">{m.vector}</td></tr>))}
+                  <tr key={i} className="border-t border-ec-surface-alt"><td className="td">{m.version}</td><td className="td">{m.score ?? "—"}</td><td className="td"><SeverityBadge severity={m.severity} /></td>
+                    <td className="td">{m.source} <span className="text-xs text-ec-slate">{m.type}</span></td><td className="td break-all font-mono text-xs">{m.vector}</td></tr>))}
                 </tbody></table>)}
           </section>
 
           <section className="card overflow-x-auto">
             <h2 className="mb-2 flex items-center gap-1 font-semibold">Affected products<InfoTip k="cpe" /><Prov cve={c} field="products" /></h2>
-            {c.products.length === 0 ? <p className="text-sm text-slate-500">No CPE applicability published yet.</p> : (
+            {c.products.length === 0 ? <p className="text-sm text-ec-slate">No CPE applicability published yet.</p> : (
               <table className="min-w-full text-sm"><thead><tr><th className="th">Vendor</th><th className="th">Product</th><th className="th">Versions</th><th className="th">Source</th></tr></thead>
                 <tbody>{c.products.map((p, i) => (
-                  <tr key={i} className="border-t border-slate-100"><td className="td">{p.vendor}</td><td className="td">{p.product}</td><td className="td">{range(p)}</td><td className="td text-xs uppercase text-slate-500">{p.source}</td></tr>))}
+                  <tr key={i} className="border-t border-ec-surface-alt"><td className="td">{p.vendor}</td><td className="td">{p.product}</td><td className="td">{range(p)}</td><td className="td text-xs uppercase text-ec-slate">{p.source}</td></tr>))}
                 </tbody></table>)}
           </section>
 
@@ -105,10 +106,10 @@ export default function CveDetailPage() {
                 <li key={r.url} className="break-all">
                   {/* URLs were filtered to http(s) on ingestion; rel=noopener prevents tab-nabbing. */}
                   <a className="link" href={r.url} target="_blank" rel="noopener noreferrer nofollow">{r.url}</a>
-                  {r.tags.map((t) => <span key={t} className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${t === "Exploit" ? "bg-slate-800 text-white" : t === "Patch" || t === "Vendor Advisory" ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-ec-slate"}`}>{t}</span>)}
+                  {r.tags.map((t) => <span key={t} className={`ml-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${t === "Exploit" ? "bg-ec-navy text-white" : t === "Patch" || t === "Vendor Advisory" ? "bg-emerald-100 text-emerald-900" : "bg-slate-100 text-ec-slate"}`}>{t}</span>)}
                 </li>
               ))}
-              {c.references.length === 0 && <li className="text-slate-500">No references.</li>}
+              {c.references.length === 0 && <li className="text-ec-slate">No references.</li>}
             </ul>
           </section>
         </div>
@@ -128,7 +129,7 @@ export default function CveDetailPage() {
                 <li key={i} className="mb-3 ml-4">
                   <span className="absolute -left-1.5 mt-1.5 h-3 w-3 rounded-full border border-white bg-ec-navy" aria-hidden="true" />
                   <p className="text-sm font-medium">{e.event_type.replace("_", " ")}</p>
-                  <p className="text-xs text-slate-500">{fmtDateTime(e.occurred_at)} · {e.source}</p>
+                  <p className="text-xs text-ec-slate">{fmtDateTime(e.occurred_at)} · {e.source}</p>
                   {e.event_type === "EPSS_CHANGED" && <p className="text-xs">{pct(e.detail.from as number)} → {pct(e.detail.to as number)}</p>}
                 </li>
               ))}
