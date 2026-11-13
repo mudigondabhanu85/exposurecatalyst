@@ -18,3 +18,8 @@ exposurecatalyst-brand.zip
 frontend/public/brand/
 frontend/public/favicon.ico
 docs/assets/brand/
+
+infra/terraform/.terraform/
+infra/terraform/*.tfstate*
+infra/terraform/terraform.tfvars
+infra/terraform/plan

@@ -72,6 +72,14 @@ All tiers are Multi-AZ: ALB, NAT per AZ, ECS services spread across AZs, Aurora 
 another AZ, ElastiCache replication group. The API and workers are stateless; session state is in the DB.
 Losing an AZ removes capacity but not availability.
 
+## Implementation status
+
+The Terraform reference deployment (`infra/terraform`) provisions everything above **except** the SQS queues and
+EventBridge bus. This release runs ingestion, asset correlation and alert evaluation in the **scheduler**
+service (a single ECS task; work is claimed through the database, so a second replica is safe), which is the
+"scheduler service" option in flow ⑧. SQS/EventBridge and a separate worker service are the scale-out path,
+provisioned when the worker mode ships.
+
 ## Local equivalent
 
 `docker-compose.yml` mirrors the logical architecture: `postgres` (Aurora), `api`, `scheduler` (worker and

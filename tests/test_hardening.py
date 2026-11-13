@@ -64,3 +64,13 @@ def test_retention_and_daily_guard(db, settings, db_factory):
     assert db.query(UserSession).count() == 1 and db.query(JobRun).count() == 1
     assert run_daily(settings, get_session_factory()) is not None
     assert run_daily(settings, get_session_factory()) is None  # at most once per 24 h
+
+
+def test_database_password_merged_into_url():
+    from exposurecatalyst.config import Settings
+
+    s = Settings(env="test", database_url="postgresql+psycopg://excat_admin@db.internal:5432/excat?sslmode=require",
+                 database_password="p@ss/w:rd")
+    url = s.database_url.get_secret_value()
+    assert url.startswith("postgresql+psycopg://excat_admin:p%40ss%2Fw%3Ard@db.internal:5432/excat")
+    assert url.endswith("sslmode=require")

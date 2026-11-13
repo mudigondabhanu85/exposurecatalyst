@@ -50,6 +50,11 @@ class Settings(BaseSettings):
         description="SQLAlchemy URL, e.g. `postgresql+psycopg://user:pass@host:5432/excat?sslmode=require`. "
         "SQLite is for development only.",
     )
+    database_password: SecretStr | None = Field(
+        None,
+        description="Database password injected separately (e.g. ECS secret from the RDS-managed secret's "
+        "`password` field). When set, it is inserted into EXCAT_DATABASE_URL, which then needs no password.",
+    )
     db_pool_size: int = Field(10, ge=1, description="Connection pool size (non-SQLite).")
     db_max_overflow: int = Field(20, ge=0, description="Extra connections allowed above the pool size.")
     db_pool_recycle_seconds: int = Field(1800, ge=60, description="Recycle connections after N seconds.")
@@ -210,6 +215,15 @@ class Settings(BaseSettings):
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.get_secret_value().startswith("sqlite")
+
+    @model_validator(mode="after")
+    def _merge_db_password(self) -> Settings:
+        if self.database_password is not None:
+            from sqlalchemy.engine import make_url
+
+            url = make_url(self.database_url.get_secret_value()).set(password=self.database_password.get_secret_value())
+            self.database_url = SecretStr(url.render_as_string(hide_password=False))
+        return self
 
     @model_validator(mode="after")
     def _prod_guardrails(self) -> Settings:
