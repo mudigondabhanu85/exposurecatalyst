@@ -48,7 +48,7 @@ function OidcSection({ hasMappings }: { hasMappings: boolean }) {
   return (
     <section className="card" aria-labelledby="oidc-title" data-tour="oidc">
       <h2 id="oidc-title" className="mb-1 font-heading font-bold">Alternative: OpenID Connect (OIDC)</h2>
-      <p className="mb-3 text-sm text-ec-slate">Use OIDC instead of — or alongside — SAML. Okta Admin → Applications → Create App Integration → <strong>OIDC – OpenID Connect</strong> → <strong>Web Application</strong>
+      <p className="mb-3 text-sm text-ec-slate">Use OIDC instead of — or alongside — SAML. Okta Admin → Applications → Create App Integration → <strong>OIDC – OpenID Connect</strong> → <strong>Web Application</strong>{" "}
         (grant type: Authorization Code). Add a <code>groups</code> claim to the ID token (Sign On → OpenID Connect ID Token → Groups claim filter, e.g. <em>Starts with</em> <code>Excat</code>). Roles come from the same group mappings above.</p>
       <Copy label="Sign-in redirect URI" value={c.redirect_uri} />
       {msg && <p role="status" className="my-2 rounded-sm bg-ec-surface-alt px-3 py-2 text-sm">{msg}</p>}
