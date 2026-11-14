@@ -37,7 +37,7 @@ export default function SettingsPage() {
         <ul className="space-y-1">
           {visible.map((t) => (
             <li key={t.to}>
-              <NavLink to={t.to} className={({ isActive }) => `block rounded-md px-3 py-2 text-sm ${isActive ? "bg-ec-navy text-white" : "text-ec-slate hover:bg-ec-surface-alt"}`}>
+              <NavLink to={`/settings/${t.to}`} className={({ isActive }) => `block rounded-md px-3 py-2 text-sm ${isActive ? "bg-ec-navy text-white" : "text-ec-slate hover:bg-ec-surface-alt"}`}>
                 {t.label}{t.phase && <span className="ml-1 text-xs opacity-70">(Phase {t.phase})</span>}
               </NavLink>
             </li>
@@ -46,7 +46,7 @@ export default function SettingsPage() {
       </nav>
       <div className="flex-1">
         <Routes>
-          <Route index element={visible[0] ? <Navigate to={visible.find((t) => !t.phase)?.to ?? visible[0].to} replace /> : <EmptyState title="No settings available" why="Your role does not include any administrative permissions." />} />
+          <Route index element={visible[0] ? <Navigate to={`/settings/${visible.find((t) => !t.phase)?.to ?? visible[0].to}`} replace /> : <EmptyState title="No settings available" why="Your role does not include any administrative permissions." />} />
           <Route path="sources" element={can("source:manage") ? <SourcesSettings /> : <Forbidden />} />
           <Route path="rbac" element={can("user:manage") ? <RbacSettings /> : <Forbidden />} />
           <Route path="smtp" element={can("settings:manage") ? <SmtpSettings /> : <Forbidden />} />

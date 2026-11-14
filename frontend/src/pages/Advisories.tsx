@@ -42,7 +42,7 @@ function AdvisoryList() {
   return (
     <>
       <PageHeader title="Advisory Email Generator" helpId="advisories" subtitle="Draft → review → approve → send, with a full audit trail"
-                  actions={<Link className="btn-secondary" to="templates">Templates</Link>} />
+                  actions={<Link className="btn-secondary" to="/advisories/templates">Templates</Link>} />
       <div className="mb-3 flex items-center gap-2">
         <label className="label mb-0" htmlFor="st">Status</label>
         <select id="st" className="input" value={status} onChange={(e) => setStatus(e.target.value)}>
