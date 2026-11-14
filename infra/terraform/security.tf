@@ -39,3 +39,20 @@ resource "aws_secretsmanager_secret_version" "app" {
     REDIS_AUTH_TOKEN     = random_password.redis.result
   })
 }
+
+# Runtime database role (DML only). The migration task creates/updates it from this secret; the API and
+# scheduler connect with it and never receive the Aurora master credentials.
+resource "random_password" "db_app" {
+  length  = 40
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "db_app" {
+  name       = "${local.prefix}/db-app"
+  kms_key_id = aws_kms_key.data.arn
+}
+
+resource "aws_secretsmanager_secret_version" "db_app" {
+  secret_id     = aws_secretsmanager_secret.db_app.id
+  secret_string = jsonencode({ username = var.db_app_username, password = random_password.db_app.result })
+}

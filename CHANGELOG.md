@@ -17,6 +17,15 @@ and the project uses [Semantic Versioning](https://semver.org/).
   enable/disable, test sign-in), login-page button, Okta OIDC admin guide, OIDC sequence diagram, threat-model
   rows. Migration `0006` (`oidc_requests`), purged daily by retention.
 
+### Security
+- **Least-privilege database role.** `exposurecatalyst migrate --app-role excat_app` (PostgreSQL) creates or
+  updates a runtime role with `SELECT, INSERT, UPDATE, DELETE` only and `SELECT, INSERT` on `audit_log`, plus
+  default privileges for future tables. It's idempotent and also rotates the password
+  (`EXCAT_APP_DB_PASSWORD`). Terraform now runs the API and scheduler as `excat_app` with their own secret.
+  A dedicated migration task, whose execution role is the only one that can read the Aurora master
+  secret, applies migrations and the grants. Verified on PostgreSQL 16: DDL, TRUNCATE, DROP, audit-log
+  UPDATE/DELETE and self-escalation are all refused.
+
 ### Changed
 - SAML and OIDC share one sign-in completion path, so account matching, JIT provisioning, local-account
   protection and group → role rules are identical for both.

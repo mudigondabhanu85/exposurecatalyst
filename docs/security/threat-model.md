@@ -56,8 +56,9 @@ controls.
 
 | STRIDE | Threat | Controls | L/I | Residual |
 |---|---|---|---|---|
-| T | Audit log tampering | Hash chain + `audit-verify`. PostgreSQL trigger blocks UPDATE/DELETE. Recommended DML-only grants | 1/3 | Low |
+| T | Audit log tampering | Hash chain + `audit-verify`. PostgreSQL trigger blocks UPDATE/DELETE. Runtime role `excat_app` has DML only and `SELECT, INSERT` on `audit_log` | 1/3 | Low |
 | I | Data exposure at rest | Aurora/S3/ElastiCache/logs encrypted with a KMS CMK. Isolated subnets. TLS to DB and Redis | 1/3 | Low |
+| E | Compromised API/scheduler alters the schema or reads the master password | Services connect as the DML-only `excat_app`. Only the one-off migration task's execution role can read the Aurora master secret | 1/3 | Low |
 | E | Compromised task pivots in AWS | Per-service task roles (S3 exports prefix, optional Bedrock). VPC endpoints. No ECS Exec in prod | 1/3 | Low |
 | T | Template SSTI by a template author | Jinja `ImmutableSandboxedEnvironment` + autoescape. Test render on save. Approval workflow | 1/3 | Low |
 

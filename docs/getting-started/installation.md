@@ -57,9 +57,12 @@ The schema uses only portable types and named constraints. `exposurecatalyst mig
 migrations and seeds the system roles.
 
 !!! tip "Least-privilege DB account"
-    Run migrations with a DDL-capable role and the application with a DML-only role. Grant only
-    `INSERT, SELECT` on `audit_log` so the application can't alter history, even on engines without the
-    PostgreSQL immutability trigger.
+    Run migrations with a DDL-capable role and the application with a DML-only role. On PostgreSQL,
+    `EXCAT_APP_DB_PASSWORD=… exposurecatalyst migrate --app-role excat_app` does this for you: after
+    migrating it creates or updates `excat_app` with `SELECT, INSERT, UPDATE, DELETE` only, `audit_log`
+    restricted to `SELECT, INSERT`, and default privileges for future tables. Then point
+    `EXCAT_DATABASE_URL`/`EXCAT_DATABASE_PASSWORD` of the API and scheduler at `excat_app`. The Terraform
+    deployment is wired this way. On other engines, create the equivalent user by hand.
 
 ## AWS
 

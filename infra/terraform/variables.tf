@@ -70,3 +70,13 @@ variable "enable_security_services" {
   type        = bool
   default     = true
 }
+
+variable "db_app_username" {
+  description = "PostgreSQL role the API and scheduler use (DML only, created by the migration task)."
+  type        = string
+  default     = "excat_app"
+  validation {
+    condition     = can(regex("^[a-z_][a-z0-9_]{0,62}$", var.db_app_username)) && var.db_app_username != "excat_admin"
+    error_message = "Lower-case PostgreSQL identifier, different from the master user."
+  }
+}

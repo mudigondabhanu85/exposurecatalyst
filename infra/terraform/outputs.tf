@@ -6,9 +6,8 @@ output "exports_bucket" { value = aws_s3_bucket.exports.bucket }
 output "alarm_topic_arn" { value = aws_sns_topic.alarms.arn }
 
 output "run_migrations" {
-  description = "One-off migration task (run before updating the services)."
+  description = "One-off migration task (master user): run before the first deploy and before each release; it also (re)applies the DML-only runtime role."
   value = join(" ", ["aws ecs run-task --cluster", aws_ecs_cluster.this.name, "--launch-type FARGATE",
-    "--task-definition", aws_ecs_task_definition.api.family,
-    "--network-configuration 'awsvpcConfiguration={subnets=[${join(",", aws_subnet.app[*].id)}],securityGroups=[${aws_security_group.app.id}]}'",
-  "--overrides '{\"containerOverrides\":[{\"name\":\"api\",\"command\":[\"exposurecatalyst\",\"migrate\"]}]}'"])
+    "--task-definition", aws_ecs_task_definition.migrate.family,
+  "--network-configuration 'awsvpcConfiguration={subnets=[${join(",", aws_subnet.app[*].id)}],securityGroups=[${aws_security_group.app.id}]}'"])
 }

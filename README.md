@@ -60,7 +60,8 @@ tests/            pytest suite (mocked upstream APIs)
 
 Deploy with `infra/terraform` (CloudFront + WAF → ALB → ECS Fargate, Aurora PostgreSQL, Network Firewall
 egress allowlist). Read *Installation & deployment*, *Network*, *Disaster recovery* and the *Runbooks* in the
-docs. Run migrations with a DDL-capable role and the app with a DML-only role.
+docs. The migration task runs as the database owner and provisions the DML-only `excat_app` role the app
+runs as (`exposurecatalyst migrate --app-role excat_app`).
 
 ## Security highlights
 

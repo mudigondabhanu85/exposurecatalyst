@@ -23,15 +23,35 @@ def _alembic_config():
 
 
 def cmd_migrate(args) -> int:
+    import os
+
     from alembic import command
 
+    if args.app_role:
+        from exposurecatalyst.db.roles import RoleError, validate
+
+        try:
+            validate(args.app_role, os.environ.get("EXCAT_APP_DB_PASSWORD", ""))
+        except RoleError as exc:
+            print(f"App role not configured: {exc} (EXCAT_APP_DB_PASSWORD)", file=sys.stderr)
+            return 2
     command.upgrade(_alembic_config(), args.revision)
     from exposurecatalyst.db.session import init_engine
     from exposurecatalyst.main import bootstrap
 
-    init_engine(get_settings())
+    engine = init_engine(get_settings())
     bootstrap(get_settings())
     print("Database migrated and seeded.")
+    if args.app_role:
+        from exposurecatalyst.db.roles import RoleError, ensure_app_role
+
+        password = os.environ.get("EXCAT_APP_DB_PASSWORD", "")
+        try:
+            ensure_app_role(engine, args.app_role, password)
+        except RoleError as exc:
+            print(f"App role not configured: {exc}", file=sys.stderr)
+            return 2
+        print(f"Runtime role {args.app_role!r}: DML only, audit_log append-only.")
     return 0
 
 
@@ -190,6 +210,8 @@ def main(argv: list[str] | None = None) -> int:
 
     m = sub.add_parser("migrate", help="Apply database migrations and seed roles")
     m.add_argument("revision", nargs="?", default="head")
+    m.add_argument("--app-role", metavar="NAME",
+                   help="PostgreSQL: create/update this DML-only runtime role (password from EXCAT_APP_DB_PASSWORD)")
     m.set_defaults(fn=cmd_migrate)
 
     sv = sub.add_parser("serve", help="Run the API server")

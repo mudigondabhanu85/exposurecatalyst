@@ -30,7 +30,8 @@ docker buildx build --platform linux/arm64 -t "$REPO:1.0.0" --push ../..
 aws s3 sync ../../frontend/dist/assets "s3://$(terraform output -raw static_bucket)/assets" --cache-control "public,max-age=31536000,immutable"
 aws s3 sync ../../frontend/dist/brand  "s3://$(terraform output -raw static_bucket)/brand"
 
-# run migrations once per release, then roll the services
+# run migrations once per release (also creates/updates the DML-only app role), then roll the services.
+# On the very first deploy, run this before the services start: they can't connect until the role exists.
 eval "$(terraform output -raw run_migrations)"
 aws ecs update-service --cluster exposurecatalyst-prod --service api --force-new-deployment
 aws ecs update-service --cluster exposurecatalyst-prod --service scheduler --force-new-deployment
@@ -47,9 +48,16 @@ SSO in the app.
   443/587 (domain allowlist enforced by Network Firewall), and SSE-S3 on the public static-asset bucket.
   Remaining low/medium findings: CloudFront/S3 access logging and CloudTrail→CloudWatch delivery. Enable them
   if your logging standard requires it (they need an ACL-enabled log bucket).
-- The app connects to Aurora as the master user for simplicity. For least privilege, create an application
-  role with DML-only rights (and `INSERT, SELECT` only on `audit_log`) after the first migration, and point
-  `EXCAT_DATABASE_URL`/`EXCAT_DATABASE_PASSWORD` at it.
+- **Least-privilege database access.** The API and scheduler connect as `excat_app` (`db_app_username`), a
+  role with `SELECT, INSERT, UPDATE, DELETE` only, and `SELECT, INSERT` on `audit_log`. They can't create,
+  alter, drop or truncate anything, and their execution role can't read the Aurora master secret. Only the
+  **migration task** (`run_migrations` output, its own execution role) gets the master credentials: it runs
+  `exposurecatalyst migrate --app-role excat_app`, which applies Alembic migrations and then creates or
+  updates the role, its password (secret `<prefix>/db-app`) and its grants. It's idempotent, and default
+  privileges cover tables added by later migrations.
+- **Rotating the app DB password**: put a new value in the `<prefix>/db-app` secret (or taint
+  `random_password.db_app` and apply), run the migration task, then force a new deployment of both services.
+  The master password is rotated by RDS and is only read by the migration task at launch.
 - `sslmode=require` encrypts the database connection. For `verify-full`, add the RDS CA bundle to the image and
   set `sslrootcert`.
 - Add new outbound hosts (news feeds, integrations, AI providers, SMTP relay) to `egress_domains` **and** to

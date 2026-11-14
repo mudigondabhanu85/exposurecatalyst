@@ -155,7 +155,8 @@ failback procedure.
 1. Read the [changelog](../changelog.md) for breaking changes.
 2. Take a manual snapshot (`aws rds create-db-cluster-snapshot`).
 3. Deploy the new image. The API container runs `exposurecatalyst migrate` (Alembic) before serving. On ECS,
-   run it as a one-off task first: `exposurecatalyst migrate`.
+   run the migration task first (`terraform output -raw run_migrations`). It runs
+   `exposurecatalyst migrate --app-role excat_app` as the master user and re-applies the app role's grants.
 4. Check `/api/health/ready`, the version in the footer, and that the scheduler logs `scheduler_started`.
 5. Rollback: redeploy the previous image. If a migration must be undone, restore the snapshot (migrations
    are forward-only in production).

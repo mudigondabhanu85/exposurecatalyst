@@ -2,7 +2,7 @@
 
 | Control objective | AWS service / configuration (Terraform) | Application control |
 |---|---|---|
-| Identity & least privilege | IAM task role per service (`compute.tf`). Execution role reads only the app and RDS secrets | RBAC with `require()` on every route. SoD |
+| Identity & least privilege | IAM task role per service (`compute.tf`). Service execution role reads only the app and app-DB secrets; only the migration task can read the RDS master secret. App connects as DML-only `excat_app` | RBAC with `require()` on every route. SoD |
 | Secrets | Secrets Manager (generated Fernet key, RDS-managed rotated DB password), KMS CMK | Fernet-encrypted secrets in the DB, write-only APIs, `rotate-secrets` |
 | Encryption at rest | KMS CMK for Aurora, S3 exports, CloudWatch Logs, ElastiCache, SNS, ECR, CloudTrail | — |
 | Encryption in transit | ACM TLS (CloudFront TLSv1.2_2021, ALB TLS 1.3 policy), `rds.force_ssl`, Redis TLS | HSTS, `sslmode=require`, STARTTLS/SSL for SMTP |
