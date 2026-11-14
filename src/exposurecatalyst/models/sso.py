@@ -33,6 +33,20 @@ class SamlRequest(Base):
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
+class OidcRequest(Base):
+    """Outstanding OIDC authorization requests (state → nonce + PKCE verifier), single use, short-lived.
+    The state is stored hashed; the PKCE verifier is Fernet-encrypted."""
+
+    __tablename__ = "oidc_requests"
+
+    state_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    nonce: Mapped[str] = mapped_column(String(128))
+    code_verifier_enc: Mapped[str] = mapped_column(Text)
+    relay_state: Mapped[str] = mapped_column(String(500), default="/cves")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, index=True)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
 class SamlAssertion(Base):
     """Replay cache of consumed assertion IDs (kept until NotOnOrAfter)."""
 

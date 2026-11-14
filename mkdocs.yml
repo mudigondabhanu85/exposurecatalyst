@@ -76,6 +76,7 @@ nav:
       - CVE ingestion sources: admin-guide/ingestion-sources.md
       - SMTP & email delivery: admin-guide/smtp.md
       - Okta SAML single sign-on: admin-guide/okta-saml.md
+      - Okta OpenID Connect sign-in: admin-guide/okta-oidc.md
       - SailPoint provisioning & mapping: admin-guide/sailpoint.md
       - Alerts & scheduling: admin-guide/alerts.md
       - AI providers & data protection: admin-guide/ai.md

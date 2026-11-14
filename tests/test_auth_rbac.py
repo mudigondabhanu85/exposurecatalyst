@@ -13,9 +13,10 @@ from exposurecatalyst.security.crypto import get_secret_box
 from tests.conftest import PASSWORD, ApiClient
 
 # Deliberately public: health, login, the static API explorer, SAML SP endpoints (metadata, login redirect,
-# IdP POST to the ACS) and the SSO status probe used by the login page.
+# IdP POST to the ACS), the OIDC login redirect and callback, and the SSO status probe used by the login page.
 PUBLIC = {"/api/health/live", "/api/health/ready", "/api/auth/login", "/api/docs", "/api/redoc",
-          "/api/auth/sso", "/api/saml/metadata", "/api/auth/saml/login", "/api/auth/saml/acs"}
+          "/api/auth/sso", "/api/saml/metadata", "/api/auth/saml/login", "/api/auth/saml/acs",
+          "/api/auth/oidc/login", "/api/auth/oidc/callback"}
 
 
 def all_api_routes(routes):

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "exposurecatalyst"
-version = "1.0.0"
+version = "1.1.0"
 description = "ExposureCatalyst — Vulnerability Intelligence & Advisory Platform"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
@@ -34,6 +34,8 @@ dependencies = [
   "python-multipart>=0.0.12",
   "xhtml2pdf>=0.2.16",
   "python3-saml>=1.16",
+  "authlib>=1.3.2",
+  "joserfc>=1.0",
 ]
 
 [project.optional-dependencies]

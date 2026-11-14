@@ -14,6 +14,78 @@ interface Mappings {
   unmapped_groups: string[]; sso_users: number; users_without_access: number; scim_groups: number; last_scim_activity: string | null;
 }
 interface Role { id: number; name: string }
+interface OidcCfg {
+  enabled: boolean; issuer: string; client_id: string; client_secret_set: boolean; token_auth_method: string; scopes: string;
+  claim_email: string; claim_first_name: string; claim_last_name: string; claim_groups: string; jit_provisioning: boolean;
+  button_label: string; redirect_uri: string; login_url: string;
+}
+interface OidcTest { ok: boolean; message: string; issuer?: string; token_endpoint?: string; userinfo_endpoint?: string | null; keys?: number }
+
+/** OpenID Connect — the alternative to SAML. Same group → role mappings; secret is write-only. */
+function OidcSection({ hasMappings }: { hasMappings: boolean }) {
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["oidc"], queryFn: () => api<OidcCfg>("/api/settings/sso/oidc") });
+  const [msg, setMsg] = useState<string | null>(null);
+  const save = useMutation({ mutationFn: (body: Record<string, unknown>) => api<OidcCfg>("/api/settings/sso/oidc", { method: "PUT", body }),
+                             onSuccess: (d) => { qc.setQueryData(["oidc"], d); setMsg("Saved."); } });
+  const test = useMutation({ mutationFn: () => api<OidcTest>("/api/settings/sso/oidc/test", { method: "POST" }) });
+  const c = q.data;
+  if (!c) return null;
+  const base = { issuer: c.issuer, client_id: c.client_id, client_secret: null, token_auth_method: c.token_auth_method, scopes: c.scopes,
+                 claim_email: c.claim_email, claim_first_name: c.claim_first_name, claim_last_name: c.claim_last_name,
+                 claim_groups: c.claim_groups, jit_provisioning: c.jit_provisioning, button_label: c.button_label, enabled: c.enabled };
+  const ready = Boolean(c.issuer && c.client_id && c.client_secret_set);
+  const submit = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const fd = new FormData(e.currentTarget);
+    const secret = String(fd.get("o_secret") ?? "");
+    const s = (k: string) => String(fd.get(k) ?? "");
+    save.mutate({ ...base, issuer: s("o_issuer"), client_id: s("o_client"), client_secret: secret ? secret : null,
+                  token_auth_method: s("o_method"), scopes: s("o_scopes"), claim_email: s("o_email"), claim_first_name: s("o_first"),
+                  claim_last_name: s("o_last"), claim_groups: s("o_groups"), button_label: s("o_label"), jit_provisioning: fd.get("o_jit") === "on" },
+                { onSuccess: () => (e.target as HTMLFormElement).reset() });
+  };
+  return (
+    <section className="card" aria-labelledby="oidc-title" data-tour="oidc">
+      <h2 id="oidc-title" className="mb-1 font-heading font-bold">Alternative: OpenID Connect (OIDC)</h2>
+      <p className="mb-3 text-sm text-ec-slate">Use OIDC instead of — or alongside — SAML. Okta Admin → Applications → Create App Integration → <strong>OIDC – OpenID Connect</strong> → <strong>Web Application</strong>
+        (grant type: Authorization Code). Add a <code>groups</code> claim to the ID token (Sign On → OpenID Connect ID Token → Groups claim filter, e.g. <em>Starts with</em> <code>Excat</code>). Roles come from the same group mappings above.</p>
+      <Copy label="Sign-in redirect URI" value={c.redirect_uri} />
+      {msg && <p role="status" className="my-2 rounded-sm bg-ec-surface-alt px-3 py-2 text-sm">{msg}</p>}
+      <ErrorNote error={save.error ?? test.error} />
+      <form className="mt-3 grid gap-3 md:grid-cols-2" onSubmit={submit}>
+        <div><label className="label" htmlFor="o_issuer">Issuer URL</label>
+          <input id="o_issuer" name="o_issuer" type="url" className="input w-full" defaultValue={c.issuer} placeholder="https://acme.okta.com/oauth2/default" /></div>
+        <div><label className="label" htmlFor="o_client">Client ID</label><input id="o_client" name="o_client" className="input w-full" defaultValue={c.client_id} autoComplete="off" /></div>
+        <div><label className="label" htmlFor="o_secret">Client secret {c.client_secret_set && <span className="text-ec-slate">(stored — leave blank to keep)</span>}</label>
+          <input id="o_secret" name="o_secret" type="password" className="input w-full" autoComplete="new-password" placeholder={c.client_secret_set ? "••••••••" : ""} /></div>
+        <div><label className="label" htmlFor="o_method">Client authentication</label>
+          <select id="o_method" name="o_method" className="input w-full" defaultValue={c.token_auth_method}>
+            <option value="client_secret_basic">Client secret (HTTP Basic) — Okta default</option><option value="client_secret_post">Client secret (POST body)</option></select></div>
+        <div className="md:col-span-2"><label className="label" htmlFor="o_scopes">Scopes</label><input id="o_scopes" name="o_scopes" className="input w-full" defaultValue={c.scopes} /></div>
+        <div><label className="label" htmlFor="o_email">Email claim</label><input id="o_email" name="o_email" className="input w-full" defaultValue={c.claim_email} /></div>
+        <div><label className="label" htmlFor="o_groups">Groups claim</label><input id="o_groups" name="o_groups" className="input w-full" defaultValue={c.claim_groups} /></div>
+        <div><label className="label" htmlFor="o_first">First-name claim</label><input id="o_first" name="o_first" className="input w-full" defaultValue={c.claim_first_name} /></div>
+        <div><label className="label" htmlFor="o_last">Last-name claim</label><input id="o_last" name="o_last" className="input w-full" defaultValue={c.claim_last_name} /></div>
+        <div><label className="label" htmlFor="o_label">Sign-in button label</label><input id="o_label" name="o_label" className="input w-full" defaultValue={c.button_label} maxLength={60} /></div>
+        <label className="flex items-center gap-2 self-end text-sm"><input type="checkbox" name="o_jit" defaultChecked={c.jit_provisioning} />Create users on first sign-in (JIT)</label>
+        <div className="flex flex-wrap gap-2 md:col-span-2">
+          <button className="btn-primary" disabled={save.isPending}>Save OIDC settings</button>
+          <button type="button" className="btn-secondary" disabled={!c.issuer || test.isPending} onClick={() => test.mutate()}>{test.isPending ? "Testing…" : "Test discovery"}</button>
+        </div>
+      </form>
+      {test.data && <p role="status" className={`mt-3 rounded-sm px-3 py-2 text-sm ${test.data.ok ? "bg-emerald-50 text-emerald-900" : "bg-red-50 text-red-800"}`}>
+        {test.data.message}{test.data.ok && <> · token endpoint <code>{test.data.token_endpoint}</code> · {test.data.keys} signing key(s)</>}</p>}
+      <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-ec-surface-alt pt-3">
+        <button className="btn-primary" disabled={!ready || !hasMappings || save.isPending} onClick={() => save.mutate({ ...base, enabled: !c.enabled })}>
+          {c.enabled ? "Disable OIDC sign-in" : "Enable OIDC sign-in"}</button>
+        {c.enabled && <a className="btn-secondary" href={`${c.login_url}?next=/cves`} target="_blank" rel="noopener noreferrer">Test sign-in in a new tab ↗</a>}
+        {!hasMappings && <span className="text-xs text-ec-slate">Add a group mapping (Step 4) first.</span>}
+        {!ready && <span className="text-xs text-ec-slate">Save the issuer, client ID and client secret first.</span>}
+      </div>
+    </section>
+  );
+}
 interface Token { id: number; name: string; created_at: string; last_used_at: string | null; revoked: boolean }
 
 function Step({ n, title, done, children }: { n: number; title: string; done?: boolean; children: ReactNode }) {
@@ -72,7 +144,7 @@ export default function SsoSettings() {
 
   return (
     <>
-      <PageHeader title="Identity & SSO" helpId="settings-sso" subtitle="Okta SAML 2.0 sign-in · SailPoint group → role mapping · SCIM 2.0 provisioning" />
+      <PageHeader title="Identity & SSO" helpId="settings-sso" subtitle="Okta SAML 2.0 or OpenID Connect sign-in · SailPoint group → role mapping · SCIM 2.0 provisioning" />
       {msg && <p role="status" className="mb-3 rounded-sm bg-ec-surface-alt px-3 py-2 text-sm">{msg}</p>}
       <ErrorNote error={importMd.error ?? save.error ?? addMap.error ?? delMap.error ?? mkToken.error} />
       <div className="space-y-4">
@@ -124,7 +196,7 @@ export default function SsoSettings() {
         </Step>
 
         <Step n={4} title="Map SailPoint / Okta groups to roles" done={(maps.data?.mappings.length ?? 0) > 0}>
-          <p className="mb-2 text-sm text-ec-slate">SSO users get roles <strong>only</strong> through these mappings (from the SAML <code>groups</code> attribute or SCIM group membership). Users whose groups map to nothing cannot sign in.</p>
+          <p className="mb-2 text-sm text-ec-slate">SSO users get roles <strong>only</strong> through these mappings (from the SAML <code>groups</code> attribute, the OIDC <code>groups</code> claim or SCIM group membership). Users whose groups map to nothing cannot sign in.</p>
           <table className="mb-3 min-w-full text-sm">
             <thead className="bg-ec-surface-alt"><tr><th className="th">Group</th><th className="th">Role</th><th className="th">Users</th><th className="th" /></tr></thead>
             <tbody>{maps.data?.mappings.map((m) => (
@@ -150,6 +222,8 @@ export default function SsoSettings() {
             <span className="text-xs text-ec-slate">Keep this session open while testing. Local break-glass accounts keep working if SSO fails.</span>
           </div>
         </Step>
+
+        <OidcSection hasMappings={(maps.data?.mappings.length ?? 0) > 0} />
 
         <section className="card">
           <h2 className="mb-2 font-heading font-bold">SailPoint SCIM 2.0 provisioning</h2>

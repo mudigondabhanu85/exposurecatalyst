@@ -20,6 +20,7 @@ from exposurecatalyst.models import (
     AppSetting,
     Integration,
     JobRun,
+    OidcRequest,
     SamlRequest,
     User,
     UserSession,
@@ -56,6 +57,8 @@ def retention(db: Session, settings: Settings) -> dict[str, int]:
         delete(AlertEvent).where(AlertEvent.delivered_at < now - timedelta(days=settings.retention_alert_events_days)),
     )
     purge("saml_requests", delete(SamlRequest).where(SamlRequest.created_at < now - timedelta(days=1)))
+    purge("oidc_requests", delete(OidcRequest).where(OidcRequest.created_at < now - timedelta(days=1)))
+    purge("oidc_requests", delete(OidcRequest).where(OidcRequest.created_at < now - timedelta(days=1)))
     return counts
 
 

@@ -11,6 +11,8 @@ export function safeNext(next: string | null): string {
   return next;
 }
 
+interface SsoStatus { saml_enabled: boolean; login_url: string; oidc_enabled: boolean; oidc_login_url: string; oidc_button_label: string }
+
 export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -21,7 +23,8 @@ export default function LoginPage() {
   const qc = useQueryClient();
   const nav = useNavigate();
   const [params] = useSearchParams();
-  const sso = useQuery({ queryKey: ["sso-status"], queryFn: () => api<{ saml_enabled: boolean; login_url: string }>("/api/auth/sso") });
+  const sso = useQuery({ queryKey: ["sso-status"], queryFn: () => api<SsoStatus>("/api/auth/sso") });
+  const next = encodeURIComponent(params.get("next") ?? "/cves");
   const ssoError = params.get("sso_error");
 
   const submit = async (e: FormEvent) => {
@@ -52,9 +55,12 @@ export default function LoginPage() {
         <img src="/brand/svg/logo-light.svg" alt="ExposureCatalyst" className="mx-auto mb-6 w-64 max-w-full" />
         <h1 id="login-title" className="sr-only">Sign in to ExposureCatalyst</h1>
         {ssoError && <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">Single sign-on failed: {ssoError}</p>}
-        {sso.data?.saml_enabled ? (
-          <a className="btn-primary mb-4 w-full justify-center" href={`${sso.data.login_url}?next=${encodeURIComponent(params.get("next") ?? "/cves")}`}>Sign in with Okta</a>
-        ) : (
+        {sso.data?.saml_enabled && (
+          <a className="btn-primary mb-2 w-full justify-center" href={`${sso.data.login_url}?next=${next}`}>Sign in with Okta</a>)}
+        {sso.data?.oidc_enabled && (
+          <a className={`${sso.data.saml_enabled ? "btn-secondary" : "btn-primary"} mb-2 w-full justify-center`} href={`${sso.data.oidc_login_url}?next=${next}`}>
+            {sso.data.saml_enabled && sso.data.oidc_button_label === "Sign in with Okta" ? "Sign in with Okta (OpenID Connect)" : sso.data.oidc_button_label}</a>)}
+        {(sso.data?.saml_enabled || sso.data?.oidc_enabled) ? <div className="mb-2" /> : (
           <button type="button" disabled className="btn-secondary mb-4 w-full justify-center" title="An administrator has not enabled Okta sign-in yet">Sign in with Okta (not configured)</button>
         )}
         <div className="mb-4 flex items-center gap-2 text-xs text-ec-slate"><span className="h-px flex-1 bg-ec-border" />local account<InfoTip k="local_account" /><span className="h-px flex-1 bg-ec-border" /></div>

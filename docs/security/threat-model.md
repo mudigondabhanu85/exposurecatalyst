@@ -20,12 +20,15 @@ controls.
 | E | Privilege escalation via RBAC APIs | Server-side `require()` on every route (tested across >80 routes). Can't grant what you don't hold. Can't change your own roles | 1/3 | Low |
 | D | Login brute force or API flooding | WAF managed rules + login rate rule. App rate limits. Lockout | 2/2 | Low |
 
-## TB2 — Identity providers ↔ App
+## TB2 — Identity providers ↔ App (SAML, OIDC, SCIM)
 
 | STRIDE | Threat | Controls | L/I | Residual |
 |---|---|---|---|---|
 | S | Forged or altered SAML assertion | Signed assertions required. Strict mode. SHA-1 rejected. Audience/Recipient/Destination from `EXCAT_PUBLIC_URL` | 1/3 | Low |
 | S | Replay, or login injection (attacker's assertion) | `InResponseTo` must match a stored, unused request ID ≤ 10 min. Assertion-ID replay cache. IdP-initiated off | 1/3 | Low |
+| S | Forged or substituted OIDC ID token | Signature against the issuer's JWKS, asymmetric algorithms only (`none`/HMAC refused), `iss`, `aud`/`azp`, `exp`/`iat`, `nonce` bound to the stored request | 1/3 | Low |
+| S | OIDC code interception or login CSRF | PKCE S256 (verifier encrypted server-side), hashed single-use `state` ≤ 10 min, confidential client, redirect URI from `EXCAT_PUBLIC_URL` | 1/3 | Low |
+| I | OIDC discovery used for SSRF or to redirect the token request | Issuer must be https on an Okta domain or the allowlist; every discovered endpoint must be on the issuer host | 1/2 | Low |
 | E | IdP identity takes over a break-glass account | SSO/SCIM can never bind to local accounts | 1/3 | Low |
 | E | Over-provisioning via groups | Roles only from explicit group mappings. Unmapped users have no access. Mapping a role requires holding its permissions | 2/2 | Low |
 | S | Stolen SCIM token | Shown once, stored hashed, revocable, last-used visible. Bearer only on `/scim/v2`. Every change audited | 2/2 | Medium (rotate tokens; restrict SailPoint egress IPs at WAF) |

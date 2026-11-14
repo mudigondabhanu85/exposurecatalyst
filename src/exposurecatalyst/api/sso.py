@@ -1,4 +1,4 @@
-"""Okta SAML endpoints, Settings → Identity & SSO, group → role mapping, SCIM tokens."""
+"""Okta SAML and OIDC endpoints, Settings → Identity & SSO, group → role mapping, SCIM tokens."""
 
 from __future__ import annotations
 
@@ -23,9 +23,10 @@ from exposurecatalyst.db.session import get_db
 from exposurecatalyst.ingestion.http import SourceClient
 from exposurecatalyst.models import GroupRoleMapping, Role, ScimGroup, ScimToken, User
 from exposurecatalyst.security import audit
+from exposurecatalyst.security.crypto import get_secret_box
 from exposurecatalyst.security.rbac import Permission as P
 from exposurecatalyst.security.sessions import create_session
-from exposurecatalyst.sso import saml
+from exposurecatalyst.sso import oidc, saml
 from exposurecatalyst.sso.identity import (
     AccountConflictError,
     apply_groups,
@@ -44,8 +45,10 @@ OKTA_HOSTS = ["*.okta.com", "*.oktapreview.com", "*.okta-emea.com", "*.okta-gov.
 
 @router.get("/api/auth/sso")
 def sso_status(db: Session = Depends(get_db)) -> dict:
-    cfg = saml.load_config(db)
-    return {"saml_enabled": bool(cfg["enabled"]), "login_url": saml.LOGIN_PATH}
+    cfg, ocfg = saml.load_config(db), oidc.load_config(db)
+    return {"saml_enabled": bool(cfg["enabled"]), "login_url": saml.LOGIN_PATH,
+            "oidc_enabled": bool(ocfg["enabled"]), "oidc_login_url": oidc.LOGIN_PATH,
+            "oidc_button_label": ocfg["button_label"]}
 
 
 @router.get(saml.METADATA_PATH)
@@ -82,61 +85,93 @@ def _bounce(target: str, message: str | None = None) -> HTMLResponse:
     )
 
 
+class SsoLoginError(PermissionError):
+    pass
+
+
+def _complete_sso_login(db: Session, request: Request, settings: Settings, ident: dict[str, Any], *,
+                        method: str, jit: bool) -> tuple[str, Any]:
+    """Shared by SAML and OIDC: find or JIT-create the SSO user (never a local account), derive roles from
+    group mappings only, and open a session. Returns (session token, session)."""
+    user = find_identity(db, email=ident["email"], username=ident["email"])
+    guard_not_local(user)
+    if user is None:
+        if not jit:
+            raise SsoLoginError("no account provisioned for this identity (SCIM provisioning required)")
+        user = User(username=ident["email"], email=ident["email"], is_local=False, auth_source=method,
+                    password_hash=None, roles=[], sso_groups=[])
+        db.add(user)
+        db.flush()
+    if not user.is_active:
+        raise SsoLoginError("account is deactivated")
+    name = " ".join(x for x in (ident["first_name"], ident["last_name"]) if x)
+    user.display_name = name or user.display_name
+    # SCIM-provisioned users keep SCIM-managed groups; other SSO users take the IdP's groups.
+    if user.auth_source != "scim":
+        apply_groups(db, user, normalize_groups(ident["groups"]))
+    if not user.roles:
+        raise SsoLoginError("your groups are not mapped to any ExposureCatalyst role — ask an administrator")
+    user.last_login_at = utcnow()
+    token, sess = create_session(
+        db, user, settings, ip=client_ip(request), user_agent=request.headers.get("user-agent"), mfa_verified=True
+    )
+    audit.record(db, "auth.login", actor=user, request=request,
+                 details={"method": method, "groups": user.sso_groups, "roles": [r.name for r in user.roles]})
+    db.commit()
+    return token, sess
+
+
+def _sso_failure(db: Session, request: Request, method: str, exc: Exception) -> HTMLResponse:
+    db.rollback()
+    audit.record(db, "auth.login", actor_username=method, request=request, outcome="failure",
+                 details={"method": method, "reason": str(exc)[:300]})
+    db.commit()
+    return _bounce("/login", str(exc))
+
+
 @router.post(saml.ACS_PATH, include_in_schema=False)
 async def saml_acs(request: Request, db: Session = Depends(get_db), settings: Settings = Depends(settings_dep)):
     form = {k: str(v) for k, v in (await request.form()).items() if k in ("SAMLResponse", "RelayState")}
     try:
         ident = saml.consume(db, settings, form)
-        user = find_identity(db, email=ident["email"], username=ident["email"])
-        guard_not_local(user)
-        cfg = saml.load_config(db)
-        if user is None:
-            if not cfg["jit_provisioning"]:
-                raise saml.SamlError("no account provisioned for this identity (SCIM provisioning required)")
-            user = User(
-                username=ident["email"],
-                email=ident["email"],
-                is_local=False,
-                auth_source="saml",
-                password_hash=None,
-                roles=[],
-                sso_groups=[],
-            )
-            db.add(user)
-            db.flush()
-        if not user.is_active:
-            raise saml.SamlError("account is deactivated")
-        name = " ".join(x for x in (ident["first_name"], ident["last_name"]) if x)
-        user.display_name = name or user.display_name
-        # SCIM-provisioned users keep SCIM-managed groups; SAML-only users take the assertion's groups.
-        if user.auth_source != "scim":
-            apply_groups(db, user, normalize_groups(ident["groups"]))
-        if not user.roles:
-            raise saml.SamlError("your groups are not mapped to any ExposureCatalyst role — ask an administrator")
-        user.last_login_at = utcnow()
-        token, sess = create_session(
-            db, user, settings, ip=client_ip(request), user_agent=request.headers.get("user-agent"), mfa_verified=True
-        )
-        audit.record(
-            db,
-            "auth.login",
-            actor=user,
-            request=request,
-            details={"method": "saml", "groups": user.sso_groups, "roles": [r.name for r in user.roles]},
-        )
-        db.commit()
-    except (saml.SamlError, AccountConflictError) as exc:
-        db.rollback()
-        audit.record(
-            db,
-            "auth.login",
-            actor_username="saml",
-            request=request,
-            outcome="failure",
-            details={"method": "saml", "reason": str(exc)[:300]},
-        )
-        db.commit()
-        return _bounce("/login", str(exc))
+        token, sess = _complete_sso_login(db, request, settings, ident, method="saml",
+                                          jit=saml.load_config(db)["jit_provisioning"])
+    except (saml.SamlError, SsoLoginError, AccountConflictError) as exc:
+        return _sso_failure(db, request, "saml", exc)
+    resp = _bounce(ident["relay"])
+    _set_cookies(resp, settings, token, sess.csrf_token)
+    return resp
+
+
+# ---- public OIDC endpoints --------------------------------------------------------------------------
+
+
+@router.get(oidc.LOGIN_PATH)
+def oidc_login(
+    next: str | None = Query(None, max_length=500),  # noqa: A002
+    db: Session = Depends(get_db),
+    settings: Settings = Depends(settings_dep),
+) -> RedirectResponse:
+    try:
+        return RedirectResponse(oidc.login_url(db, settings, next), status_code=303)
+    except oidc.OidcError as exc:
+        raise HTTPException(409, str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001 - discovery outage: tell the user, keep details in logs
+        raise HTTPException(502, f"Identity provider unavailable: {type(exc).__name__}") from exc
+
+
+@router.get(oidc.CALLBACK_PATH, include_in_schema=False)
+def oidc_callback(request: Request, db: Session = Depends(get_db), settings: Settings = Depends(settings_dep)):
+    params = {k: v[:4000] for k, v in request.query_params.items()
+              if k in ("code", "state", "error", "error_description")}
+    try:
+        ident = oidc.consume(db, settings, params)
+        token, sess = _complete_sso_login(db, request, settings, ident, method="oidc",
+                                          jit=oidc.load_config(db)["jit_provisioning"])
+    except (oidc.OidcError, SsoLoginError, AccountConflictError) as exc:
+        return _sso_failure(db, request, "oidc", exc)
+    except Exception as exc:  # noqa: BLE001 - e.g. provider unreachable; never leak a stack trace
+        return _sso_failure(db, request, "oidc", oidc.OidcError(f"sign-in failed: {type(exc).__name__}"))
     resp = _bounce(ident["relay"])
     _set_cookies(resp, settings, token, sess.csrf_token)
     return resp
@@ -260,6 +295,85 @@ def import_metadata(
     )
     db.commit()
     return _saml_out(db, settings)
+
+
+class OidcConfigIn(BaseModel):
+    enabled: bool = False
+    issuer: str = Field("", max_length=500)
+    client_id: str = Field("", max_length=255)
+    client_secret: str | None = Field(None, max_length=1000)  # write-only; None keeps the stored secret
+    token_auth_method: str = Field("client_secret_basic", pattern="^client_secret_(basic|post)$")
+    scopes: str = Field("openid email profile groups", max_length=500)
+    claim_email: str = Field("email", max_length=100)
+    claim_first_name: str = Field("given_name", max_length=100)
+    claim_last_name: str = Field("family_name", max_length=100)
+    claim_groups: str = Field("groups", max_length=100)
+    jit_provisioning: bool = True
+    button_label: str = Field("Sign in with Okta", min_length=1, max_length=60)
+
+
+def _oidc_out(db: Session, settings: Settings) -> dict[str, Any]:
+    return {**oidc.public_config(oidc.load_config(db)), "redirect_uri": oidc.redirect_uri(settings),
+            "login_url": oidc.LOGIN_PATH}
+
+
+@router.get("/api/settings/sso/oidc")
+def get_oidc(_: Principal = Depends(require(P.SSO_MANAGE)), db: Session = Depends(get_db),
+             settings: Settings = Depends(settings_dep)) -> dict:
+    return _oidc_out(db, settings)
+
+
+@router.put("/api/settings/sso/oidc")
+def put_oidc(body: OidcConfigIn, request: Request, p: Principal = Depends(require(P.SSO_MANAGE)),
+             db: Session = Depends(get_db), settings: Settings = Depends(settings_dep)) -> dict:
+    current = oidc.load_config(db)
+    cfg = body.model_dump(exclude={"client_secret"})
+    if cfg["issuer"]:
+        try:
+            cfg["issuer"] = oidc.normalize_issuer(cfg["issuer"])
+        except oidc.OidcError as exc:
+            raise HTTPException(422, str(exc)) from exc
+    if "openid" not in cfg["scopes"].split():
+        raise HTTPException(422, "Scopes must include 'openid'")
+    if body.client_secret is not None:
+        cfg["client_secret_enc"] = get_secret_box().encrypt(body.client_secret) if body.client_secret else ""
+    else:
+        cfg["client_secret_enc"] = current["client_secret_enc"]
+    if cfg["enabled"]:
+        if not (cfg["issuer"] and cfg["client_id"] and cfg["client_secret_enc"]):
+            raise HTTPException(422, "Set the issuer, client ID and client secret before enabling OIDC")
+        if not db.scalar(select(func.count()).select_from(GroupRoleMapping)):
+            raise HTTPException(422, "Map at least one group to a role before enabling OIDC "
+                                     "(otherwise nobody can sign in)")
+        try:
+            oidc.provider(settings, cfg["issuer"], refresh=True)
+        except Exception as exc:  # noqa: BLE001
+            raise HTTPException(422, f"OIDC discovery failed: {str(exc)[:200]}") from exc
+    oidc.save_config(db, cfg, p.user.username)
+    audit.record(db, "settings.oidc_updated", actor=p.user, request=request, target_type="settings",
+                 target_id="sso.oidc", details={**oidc.public_config(cfg),
+                                                "client_secret_changed": body.client_secret is not None})
+    db.commit()
+    return _oidc_out(db, settings)
+
+
+@router.post("/api/settings/sso/oidc/test")
+def test_oidc(p: Principal = Depends(require(P.SSO_MANAGE)), db: Session = Depends(get_db),
+              settings: Settings = Depends(settings_dep)) -> dict:
+    """Discovery + JWKS check (the client secret is only verified by a real sign-in)."""
+    cfg = oidc.load_config(db)
+    if not cfg["issuer"]:
+        raise HTTPException(422, "Set the issuer first")
+    try:
+        entry = oidc.provider(settings, cfg["issuer"], refresh=True)
+    except Exception as exc:  # noqa: BLE001
+        return {"ok": False, "message": f"{type(exc).__name__}: {str(exc)[:300]}"}
+    meta = entry["meta"]
+    return {"ok": True,
+            "message": "Discovery and signing keys loaded. Finish with a test sign-in in a private window.",
+            "issuer": meta["issuer"], "authorization_endpoint": meta["authorization_endpoint"],
+            "token_endpoint": meta["token_endpoint"], "userinfo_endpoint": meta.get("userinfo_endpoint"),
+            "keys": len(entry["jwks"].keys), "scopes_supported": meta.get("scopes_supported", [])[:30]}
 
 
 # ---- group → role mapping ----------------------------------------------------------------------

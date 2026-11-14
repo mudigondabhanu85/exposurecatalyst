@@ -4,10 +4,10 @@
 sources, correlates them with affected assets from your security and CTEM tools, and generates reviewable
 stakeholder advisory emails.
 
-> **Status: 1.0.0** — all six phases delivered: CVE Intelligence (NVD + CISA KEV + FIRST EPSS), Advisory Email
+> **Status: 1.1.0** — all six phases delivered: CVE Intelligence (NVD + CISA KEV + FIRST EPSS), Advisory Email
 > Generator with approval workflow, integrations (Qualys, Tanium, Wiz, Zafran, ArmorCode, ServiceNow CMDB), Okta
-> SAML SSO + SailPoint SCIM, alerts, Security News, a multi-provider AI layer with redaction, guided tours,
-> Terraform AWS reference deployment, and DOCX / standalone HTML documentation. OIDC is not yet supported.
+> SAML or OIDC SSO + SailPoint SCIM, alerts, Security News, a multi-provider AI layer with redaction, guided tours,
+> Terraform AWS reference deployment, and DOCX / standalone HTML documentation.
 > See `CHANGELOG.md`.
 
 ## Quick start (Docker)

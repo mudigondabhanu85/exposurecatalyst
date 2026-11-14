@@ -25,7 +25,7 @@ class User(Base):
     password_hash: Mapped[str | None] = mapped_column(String(255))  # NULL for SSO-only users
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_local: Mapped[bool] = mapped_column(Boolean, default=True)
-    auth_source: Mapped[str] = mapped_column(String(16), default="local")  # local | saml | scim
+    auth_source: Mapped[str] = mapped_column(String(16), default="local")  # local | saml | oidc | scim
     external_id: Mapped[str | None] = mapped_column(String(255))  # SCIM externalId (SailPoint identity)
     scim_id: Mapped[str | None] = mapped_column(String(36), unique=True)
     sso_groups: Mapped[list[str]] = mapped_column(JSON, default=list)  # from SAML attribute or SCIM groups

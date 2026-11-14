@@ -3,7 +3,25 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
-## [1.0.0] — 2026-11-13 — Phase 6: hardening, AWS deployment and documentation
+## [1.1.0] — 2026-11-14 — OpenID Connect sign-in
+
+### Added
+- **OpenID Connect sign-in** as the alternative to SAML 2.0 (both can be enabled). Authorization Code flow
+  with PKCE (S256) as a confidential client, built on Authlib/joserfc. Hashed single-use `state`, `nonce`
+  bound to the ID token, PKCE verifier encrypted server-side, full ID-token validation (JWKS signature,
+  asymmetric algorithms only, `iss`, `aud`/`azp`, `exp`/`iat`, `nonce`), `email_verified` enforced, groups
+  from the ID token or userinfo, automatic JWKS refetch on signing-key rotation.
+- Discovery hardening: the issuer must be https on an Okta domain or the egress allowlist, and every
+  discovered endpoint must be on the issuer's host.
+- Settings → Identity & SSO → **Alternative: OpenID Connect** (write-only client secret, *Test discovery*,
+  enable/disable, test sign-in), login-page button, Okta OIDC admin guide, OIDC sequence diagram, threat-model
+  rows. Migration `0006` (`oidc_requests`), purged daily by retention.
+
+### Changed
+- SAML and OIDC share one sign-in completion path, so account matching, JIT provisioning, local-account
+  protection and group → role rules are identical for both.
+
+ — 2026-11-13 — Phase 6: hardening, AWS deployment and documentation
 
 ### Added
 - **Terraform AWS reference deployment** (`infra/terraform`): VPC with public, firewall, private-app and

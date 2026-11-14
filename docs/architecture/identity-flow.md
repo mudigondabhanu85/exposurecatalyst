@@ -28,6 +28,36 @@ navigation that started cross-site, so a plain HTTP redirect after Okta's POST w
 ACS therefore returns a tiny page with `<meta http-equiv="refresh">` to the target path. That navigation
 starts from our own origin, so the cookie is sent. No inline script is involved, so the strict CSP is kept.
 
+## OpenID Connect alternative
+
+OIDC (Authorization Code + PKCE) replaces steps 2–6 when it's enabled. Steps 7–9 (SCIM, group → role mapping,
+session) are identical. See the [Okta OIDC guide](../admin-guide/okta-oidc.md).
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor U as User (browser)
+    participant X as ExposureCatalyst API
+    participant DB as Aurora
+    participant O as Okta authorization server
+    U->>X: GET /api/auth/oidc/login?next=/advisories
+    X->>O: discovery + JWKS (cached, issuer host only)
+    X->>DB: store hash(state), nonce, encrypted PKCE verifier (10 min, single use)
+    X-->>U: 303 → authorize (code, S256 challenge, state, nonce)
+    U->>O: authenticate + MFA
+    O-->>U: 302 → /api/auth/oidc/callback?code&state
+    U->>X: GET callback
+    X->>DB: state known, unused, fresh? → mark used
+    X->>O: POST token (code, verifier, client secret)
+    O-->>X: ID token (+ access token)
+    X->>X: verify signature (JWKS), iss, aud/azp, exp, nonce, email_verified
+    X->>DB: groups → roles, create session, audit auth.login (method oidc)
+    X-->>U: Set-Cookie, meta-refresh → /advisories
+```
+
+The callback is a cross-site top-level navigation, so it uses the same same-origin meta-refresh hop as the SAML
+ACS for the `SameSite=Strict` session cookie.
+
 ## Authorization model
 
 ```mermaid
