@@ -90,6 +90,8 @@ class QualysConnector(Connector):
     def __init__(self, *a, db: Session | None = None, **kw):
         super().__init__(*a, **kw)
         self.db = db
+        # Qualys answers HTTP 409 when the subscription's concurrency limit is reached: back off and retry.
+        self.client.retry_status.add(409)
 
     def _get(self, path_or_url: str, params: dict | None = None):
         url = path_or_url if path_or_url.startswith("https://") else self.url(path_or_url)

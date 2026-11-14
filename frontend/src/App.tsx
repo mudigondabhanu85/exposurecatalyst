@@ -32,6 +32,7 @@ export function helpIdFor(path: string): string {
   if (path.startsWith("/settings/ai")) return "settings-ai";
   if (path.startsWith("/settings/news")) return "settings-news";
   if (path.startsWith("/settings/rbac")) return "settings-rbac";
+  if (path.startsWith("/settings/database")) return "settings-database";
   if (path.startsWith("/settings")) return "settings-sources";
   return "help-center";
 }

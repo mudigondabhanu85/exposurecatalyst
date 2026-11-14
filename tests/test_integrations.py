@@ -304,3 +304,23 @@ def test_servicenow_query_injection_stripped():
     from exposurecatalyst.connectors.servicenow import _q
 
     assert _q("web01^ORname!=x") == "web01ORname!=x"
+
+
+def test_qualys_retries_on_concurrency_409(admin, cve, monkeypatch, settings):
+    """Qualys signals 'concurrency limit exceeded' with HTTP 409: the connector backs off and retries."""
+    hits = {"n": 0}
+
+    def h(req: httpx.Request):
+        if req.url.path.endswith("/msp/about.php"):
+            hits["n"] += 1
+            if hits["n"] == 1:
+                return httpx.Response(409, content=b"<SIMPLE_RETURN><RESPONSE><CODE>1960</CODE></RESPONSE></SIMPLE_RETURN>")
+            return httpx.Response(200, content=b"<ABOUT><WEB-VERSION>10.30</WEB-VERSION></ABOUT>")
+        return httpx.Response(404)
+
+    monkeypatch.setattr(corr, "TRANSPORTS", {"qualys": httpx.MockTransport(h)})
+    i = _create(admin, kind="qualys", name="Q409", base_url="https://qualysapi.qg2.apps.qualys.com",
+                config={"username": "u"}, secrets={"password": "p"})
+    r = admin.post(f"/api/integrations/{i['id']}/test")
+    assert r.status_code == 200 and r.json()["ok"], r.text
+    assert hits["n"] == 2

@@ -9,6 +9,7 @@ import IntegrationsSettings from "./Integrations";
 import SsoSettings from "./Sso";
 import AlertsSettings from "./Alerts";
 import AiSettings from "./AiSettings";
+import DatabaseSettings from "./Database";
 import { EmptyState, ErrorNote, HealthBadge, PageHeader } from "../components/ui";
 
 interface Role { id: number; name: string; description: string | null; is_system: boolean; permissions: string[]; user_count: number }
@@ -19,7 +20,7 @@ interface JobRun { id: number; source: string; trigger: string; started_at: stri
 const SUBTABS: { to: string; label: string; perm: string; phase?: number }[] = [
   { to: "sso", label: "Identity & SSO", perm: "sso:manage" },
   { to: "rbac", label: "Users & RBAC", perm: "user:manage" },
-  { to: "database", label: "Database", perm: "settings:manage", phase: 6 },
+  { to: "database", label: "Database", perm: "settings:manage" },
   { to: "integrations", label: "Integrations", perm: "integration:manage" },
   { to: "smtp", label: "SMTP", perm: "settings:manage" },
   { to: "sources", label: "CVE Sources", perm: "source:manage" },
@@ -55,6 +56,7 @@ export default function SettingsPage() {
           <Route path="alerts" element={can("settings:manage") ? <AlertsSettings /> : <Forbidden />} />
           <Route path="news" element={can("news:manage") ? <NewsFeedsSettings /> : <Forbidden />} />
           <Route path="ai" element={can("ai:manage") ? <AiSettings /> : <Forbidden />} />
+          <Route path="database" element={can("settings:manage") ? <DatabaseSettings /> : <Forbidden />} />
           {SUBTABS.filter((t) => t.phase).map((t) => (
             <Route key={t.to} path={t.to} element={can(t.perm) ? (
               <><PageHeader title={t.label} helpId="help-center" /><EmptyState title={`${t.label} arrives in Phase ${t.phase}`} why="This settings area is part of the delivery plan and will include a step-by-step setup wizard with Test validation at each step." /></>

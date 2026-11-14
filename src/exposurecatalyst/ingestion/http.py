@@ -86,6 +86,7 @@ class SourceClient:
         self.allowlist = allowlist if allowlist is not None else settings.egress_allowlist_list
         self.sleep = sleep
         self.limiter = RateLimiter(rate, per, sleep=sleep)
+        self.retry_status = set(RETRY_STATUS)  # connectors may add vendor-specific throttling codes
         self.client = httpx.Client(
             timeout=timeout or settings.http_timeout_seconds,
             headers={"User-Agent": settings.http_user_agent, **(headers or {})},
@@ -139,7 +140,7 @@ class SourceClient:
             else:
                 if resp.status_code in ok_statuses or (method == "GET" and resp.status_code in REDIRECT_STATUS):
                     return resp
-                if resp.status_code not in RETRY_STATUS:
+                if resp.status_code not in self.retry_status:
                     raise SourceHTTPError(f"{self.name}: HTTP {resp.status_code} from {url.split('?')[0]}",
                                           status=resp.status_code)
                 last_error = f"HTTP {resp.status_code}"

@@ -20,6 +20,7 @@ from exposurecatalyst.api import (
     alerts,
     auth,
     cves,
+    database,
     health,
     help,
     integrations,
@@ -98,7 +99,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     for r in (health.router, auth.router, cves.router, sources.router, help.router, admin.router,
               advisories.router, advisories.templates_router, smtp.router, integrations.router,
-              sso.router, scim.router, alerts.router, news.router, ai.router):
+              sso.router, scim.router, alerts.router, news.router, ai.router, database.router):
         app.include_router(r)
 
     @app.exception_handler(scim.ScimError)
