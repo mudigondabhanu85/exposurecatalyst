@@ -247,7 +247,8 @@ def test_issuer_must_be_allowlisted_https(root, okta):
     assert root.put("/api/settings/sso/oidc", json={**BODY, "enabled": False, "issuer": "http://acme.okta.com"}).status_code == 422
     r = root.put("/api/settings/sso/oidc", json={**BODY, "enabled": False, "issuer": "https://idp.evil.example"})
     assert r.status_code == 200  # saving disabled config is allowed…
-    assert root.post("/api/settings/sso/oidc/test").json()["ok"] is False  # …but egress is refused
+    res = root.post("/api/settings/sso/oidc/test").json()  # …but egress is refused, and says so
+    assert res["ok"] is False and "host not allowed" in res["message"], res
 
 
 def test_settings_require_sso_manage(login, okta):

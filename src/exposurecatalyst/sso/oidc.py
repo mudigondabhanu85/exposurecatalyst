@@ -33,6 +33,7 @@ from exposurecatalyst.db.base import as_utc, utcnow
 from exposurecatalyst.ingestion.http import SourceClient
 from exposurecatalyst.models import AppSetting, OidcRequest
 from exposurecatalyst.security.crypto import get_secret_box
+from exposurecatalyst.security.ssrf import UnsafeURLError
 from exposurecatalyst.sso.saml import safe_relay
 
 CFG_KEY = "sso.oidc"
@@ -111,9 +112,31 @@ def _same_host(url: str, issuer: str, field: str) -> str:
     return url
 
 
-def _fetch_jwks(client: SourceClient, uri: str) -> KeySet:
+def _json(resp, what: str) -> dict[str, Any]:
+    """Parse a JSON object. Kept separate from the request so an egress/SSRF refusal (UnsafeURLError is a
+    ValueError) is never misreported as a malformed response."""
     try:
-        return KeySet.import_key_set(client.get(uri).json())
+        data = resp.json()
+    except ValueError as exc:
+        raise OidcError(f"{what} is not JSON") from exc
+    if not isinstance(data, dict):
+        raise OidcError(f"{what} is not a JSON object")
+    return data
+
+
+def _get(client: SourceClient, url: str, what: str, **kw) -> dict[str, Any]:
+    try:
+        resp = client.get(url, **kw)
+    except UnsafeURLError as exc:
+        raise OidcError(f"{what}: host not allowed ({exc}) — use an Okta domain or add it to the "
+                        "egress allowlist") from exc
+    return _json(resp, what)
+
+
+def _fetch_jwks(client: SourceClient, uri: str) -> KeySet:
+    data = _get(client, uri, "JWKS")
+    try:
+        return KeySet.import_key_set(data)
     except (ValueError, JoseError) as exc:
         raise OidcError(f"invalid JWKS: {str(exc)[:150]}") from exc
 
@@ -126,10 +149,7 @@ def provider(settings: Settings, issuer: str, *, refresh: bool = False) -> dict[
         return hit
     client = _client(settings)
     try:
-        try:
-            meta = client.get(issuer + "/.well-known/openid-configuration").json()
-        except ValueError as exc:
-            raise OidcError("discovery document is not JSON") from exc
+        meta = _get(client, issuer + "/.well-known/openid-configuration", "discovery document")
         if meta.get("issuer", "").rstrip("/") != issuer:
             raise OidcError("discovery issuer does not match the configured issuer")
         for field in ("authorization_endpoint", "token_endpoint", "jwks_uri"):
@@ -253,20 +273,19 @@ def consume(db: Session, settings: Settings, params: dict[str, str]) -> dict[str
     client = _client(settings, "oidc-token")
     try:
         try:
-            tokens = client.request("POST", entry["meta"]["token_endpoint"], data=form, auth=auth,
-                                    headers={"Accept": "application/json"}).json()
-        except ValueError as exc:
-            raise OidcError("token response is not JSON") from exc
+            resp = client.request("POST", entry["meta"]["token_endpoint"], data=form, auth=auth,
+                                  headers={"Accept": "application/json"})
         except Exception as exc:  # noqa: BLE001 - surfaced to the user without secrets
             raise OidcError(f"token exchange failed: {str(exc)[:200]}") from exc
+        tokens = _json(resp, "token response")
         id_token = tokens.get("id_token")
         if not isinstance(id_token, str):
             raise OidcError("token response has no ID token (is the 'openid' scope requested?)")
         claims = validate_id_token(settings, cfg, entry, id_token, req.nonce)
         groups = _claim(claims, cfg["claim_groups"])
         if groups is None and entry["meta"].get("userinfo_endpoint") and tokens.get("access_token"):
-            info = client.get(entry["meta"]["userinfo_endpoint"],
-                              headers={"Authorization": f"Bearer {tokens['access_token']}"}).json()
+            info = _get(client, entry["meta"]["userinfo_endpoint"], "userinfo response",
+                        headers={"Authorization": f"Bearer {tokens['access_token']}"})
             if info.get("sub") != claims["sub"]:
                 raise OidcError("userinfo subject does not match the ID token")
             groups = _claim(info, cfg["claim_groups"])
