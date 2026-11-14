@@ -2,7 +2,8 @@
 
 The production reference deployment runs in a single AWS Region across at least two Availability Zones.
 Multi-region DR (Aurora Global Database, S3 Cross-Region Replication, Route 53 failover) and the detailed
-network architecture are documented in Phase 6.
+network architecture are documented in [Disaster recovery](../operations/disaster-recovery.md) and
+[Network architecture](network.md).
 
 <figure markdown>
   [![ExposureCatalyst AWS reference architecture](../assets/diagrams/aws_high_level.svg)](../assets/diagrams/aws_high_level.svg)

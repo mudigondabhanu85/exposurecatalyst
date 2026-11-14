@@ -4,9 +4,11 @@
 sources, correlates them with affected assets from your security and CTEM tools, and generates reviewable
 stakeholder advisory emails.
 
-> **Status: Phase 1** — scaffold, data model, local auth + RBAC, CVE Intelligence (NVD + CISA KEV + FIRST EPSS),
-> in-app help framework, MkDocs documentation and the AWS-style diagram pipeline. See `CHANGELOG.md` and
-> `docs/index.md` → *Roadmap* for later phases.
+> **Status: 1.0.0** — all six phases delivered: CVE Intelligence (NVD + CISA KEV + FIRST EPSS), Advisory Email
+> Generator with approval workflow, integrations (Qualys, Tanium, Wiz, Zafran, ArmorCode, ServiceNow CMDB), Okta
+> SAML SSO + SailPoint SCIM, alerts, Security News, a multi-provider AI layer with redaction, guided tours,
+> Terraform AWS reference deployment, and DOCX / standalone HTML documentation. OIDC is not yet supported.
+> See `CHANGELOG.md`.
 
 ## Quick start (Docker)
 
@@ -31,24 +33,34 @@ make migrate
 make run          # API + embedded scheduler on :8000
 make frontend-dev # Vite on :5173 proxying /api and /docs
 make test
-make docs         # diagrams (Graphviz or Docker) + reference pages + MkDocs → dist/docs/site
+make docs         # diagrams + Mermaid + reference pages + MkDocs + DOCX/HTML guides → dist/docs/{site,exports}
 ```
 
 ## Repository layout
 
 ```
 src/exposurecatalyst/
-  api/            FastAPI routers (auth, cves, sources, help, admin, health)
+  api/            FastAPI routers (auth, cves, sources, advisories, integrations, sso, scim, alerts, news, ai, help…)
   ingestion/      http client (SSRF guard, rate limit, backoff), nvd/kev/epss sources, scheduler
+  advisories/     templates, rendering, .eml/PDF/Excel, SMTP     connectors/  Qualys, Tanium, Wiz, REST, ServiceNow
+  sso/            SAML SP, identity mapping      alerts/  rule engine     news/  feeds     ai/  providers + guard
+  maintenance.py  retention + secret re-encryption
   security/       rbac, sessions, passwords (Argon2id), crypto (Fernet), ssrf, audit (hash chain), middleware
   models/         SQLAlchemy 2.x models     help/  in-app help loader (RBAC-filtered Markdown)
-  docs/           documentation build pipeline
+  docs/           documentation build + DOCX/HTML export pipeline
 migrations/       Alembic (portable across PostgreSQL/MySQL/MariaDB/SQL Server/Oracle/SQLite)
 frontend/         React + TypeScript + Tailwind SPA
 docs/             MkDocs source; docs/help/*.md is ALSO the in-app help (single source of truth)
 docs/diagrams/    Python "diagrams" sources → docs/assets/diagrams/*.{svg,png,drawio}
+infra/terraform/  AWS reference deployment (see its README)
 tests/            pytest suite (mocked upstream APIs)
 ```
+
+## Production
+
+Deploy with `infra/terraform` (CloudFront + WAF → ALB → ECS Fargate, Aurora PostgreSQL, Network Firewall
+egress allowlist). Read *Installation & deployment*, *Network*, *Disaster recovery* and the *Runbooks* in the
+docs. Run migrations with a DDL-capable role and the app with a DML-only role.
 
 ## Security highlights
 

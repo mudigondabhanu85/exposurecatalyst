@@ -22,7 +22,9 @@ No. Combine CVSS (severity) with EPSS (likelihood), KEV (known exploitation) and
 (affected assets).
 
 **Does ExposureCatalyst send our data anywhere?**
-Phase 1 only *downloads* public data from NVD, CISA and FIRST. Outbound hosts are restricted by an egress
+Only where your administrators configure it: advisory emails go to the recipients you approve, alerts go to
+the configured email, Slack or Teams destinations, and AI features (off by default) send redacted text to the
+approved provider. Integrations are read-only lookups. Every outbound host is restricted by an egress
 allowlist.
 
 **I was signed out unexpectedly.**

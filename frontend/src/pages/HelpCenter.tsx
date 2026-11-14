@@ -137,14 +137,6 @@ export default function HelpCenterPage() {
         {tab === "shortcuts" && <HelpDoc id="shortcuts" />}
         {tab === "whatsnew" && changelog.data && <Markdown source={changelog.data} />}
       </div>
-
-      <section className="card mt-4">
-        <h2 className="mb-1 font-semibold">Download documentation</h2>
-        <p className="text-sm text-ec-slate">
-          DOCX and standalone HTML exports of the full guide and the audience-specific guides (User, Admin, Security &amp; Architecture) are produced by the documentation pipeline in Phase 6.
-          Until then, use the <a className="link" href="/docs/" target="_blank" rel="noopener noreferrer">online documentation</a>.
-        </p>
-      </section>
     </>
   );
 }

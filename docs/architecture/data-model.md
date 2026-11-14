@@ -217,12 +217,7 @@ erDiagram
 | `distribution_lists` | | Named reusable To/CC/BCC sets | analyst |
 | `audit_log.prev_hash` / `hash` | string(64) | Hash chain: `sha256(prev_hash + canonical_json(row))` | system |
 
-## Retention (defaults; configurable in Phase 6)
+## Retention
 
-| Data | Retention |
-|---|---|
-| CVE records, products, events | Indefinite (public data) |
-| `job_runs` | 90 days |
-| `user_sessions` (expired or revoked) | 30 days |
-| `audit_log` | ≥ 1 year online, then archived to S3 with Object Lock (compliance mode) |
-| Saved searches | Until the user is deleted |
+Retention periods are configurable. See [Data retention](../security/data-retention.md) for the defaults,
+settings and what is kept indefinitely.

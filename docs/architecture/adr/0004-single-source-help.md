@@ -17,4 +17,4 @@ Reference pages (configuration, RBAC matrix) are **generated from code** during 
 - ✅ A single PR updates help and docs together. Code-derived pages can't drift.
 - ✅ RBAC filtering happens server-side, never only in the UI.
 - ⚠️ The published documentation site contains all content and is restricted to authenticated users.
-  Audience-specific DOCX/HTML exports (Phase 6) are filtered by role.
+  Audience-specific DOCX/HTML exports are filtered by role.

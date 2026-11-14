@@ -47,7 +47,7 @@ docs-exports:    ## Only the DOCX / standalone HTML guides (Pandoc locally or in
 	$(PY) -m exposurecatalyst.docs exports
 
 docker-build:    ## Build the container image
-	docker build -t exposurecatalyst:0.5.0 .
+	docker build -t exposurecatalyst:1.0.0 .
 
 up:              ## docker compose up (postgres, api, scheduler)
 	docker compose up -d --build

@@ -10,8 +10,8 @@ docs: admin-guide/ingestion-sources/
 
 ## What this page is for
 
-Shows the health of each CVE source and lets admins set how often it refreshes. Phase 1 sources are
-NVD API 2.0, CISA KEV and FIRST EPSS.
+Shows the health of each CVE source and lets admins set how often it refreshes. The sources are NVD API 2.0,
+CISA KEV and FIRST EPSS.
 
 ## How to use it
 

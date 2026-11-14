@@ -3,6 +3,47 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.0.0] — 2026-11-13 — Phase 6: hardening, AWS deployment and documentation
+
+### Added
+- **Terraform AWS reference deployment** (`infra/terraform`): VPC with public, firewall, private-app and
+  isolated-data subnets across two AZs; AWS Network Firewall domain allowlist; VPC endpoints; CloudFront +
+  WAF; ALB restricted to CloudFront; ECS Fargate API and scheduler; Aurora PostgreSQL (Multi-AZ, KMS,
+  managed rotated password); ElastiCache; Secrets Manager; GuardDuty, Security Hub, CloudTrail, flow logs;
+  CloudWatch alarms. Validated in CI and scanned with Trivy (no HIGH/CRITICAL).
+- **Encryption key rotation**: `EXCAT_ENCRYPTION_KEYS_PREVIOUS` (MultiFernet) and
+  `exposurecatalyst rotate-secrets [--dry-run]`.
+- **Data retention**: daily maintenance job and `exposurecatalyst retention`, configurable per data type,
+  audited.
+- **Guided tours** per role (Analyst, Approver, Admin, Viewer), automatic on first sign-in, replayable from
+  the header.
+- **Diagrams**: network, multi-region DR, DFD Level 0 and Level 1 with trust boundaries and data
+  classification, and logical components, each as SVG, 300-DPI PNG and editable draw.io.
+- **Security documentation**: STRIDE threat model per trust boundary, AWS controls mapping, data retention.
+- **Operations documentation**: monitoring and metrics, disaster recovery, and runbooks for source,
+  scheduler, connector, SMTP, AI, alert failures, IdP certificate and key rotation, backup and restore,
+  DR failover and upgrades.
+- **Documentation exports**: User, Administrator, Security & Architecture and Complete guides as branded
+  DOCX (cover, TOC, numbered headings, page numbers, landscape diagram pages) and single-file HTML, built by
+  `make docs` and in the container image. Downloadable from **Help Center → Download documentation**,
+  filtered by role.
+
+### Changed
+- `EXCAT_DATABASE_PASSWORD` is merged into the database URL, so the password can come from a separate
+  secret.
+- react-router-dom upgraded to 7.
+- Login `next` redirects reject backslashes as well as absolute URLs.
+
+### Fixed
+- Two Mermaid diagrams (SAML sequence, advisory state machine) failed to render because of `;` and `:` in
+  labels.
+
+### Known limitations
+- OIDC sign-in is not implemented (SAML 2.0 only).
+- The Terraform deploys a single region; the DR secondary region and SQS/EventBridge worker mode are
+  documented designs, not provisioned.
+- Connectors and AI providers are verified against recorded/mocked responses, not live tenants.
+
 ## [0.5.0] — 2026-11-13 — Phase 5: Security News and AI
 
 ### Added

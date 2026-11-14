@@ -17,7 +17,7 @@ stakeholder advisory emails.
 | **Integrations** | Plugin connectors for Qualys, Tanium, Wiz, Zafran, ArmorCode, ServiceNow CMDB and more | **Phase 3 ✅** |
 | **Identity** | Okta SAML 2.0, SailPoint group → role mapping (SCIM 2.0), alerts and scheduling | **Phase 4 ✅** (OIDC deferred) |
 | **Security News & AI** | De-duplicated news feeds, a multi-provider AI layer with a redaction policy | **Phase 5 ✅** |
-| **Hardening & exports** | Terraform, DR and network diagrams, threat model, runbooks, guided tours, DOCX/standalone HTML docs | Phase 6 |
+| **Hardening & exports** | Terraform, DR and network diagrams, threat model, runbooks, guided tours, DOCX/standalone HTML docs | **Phase 6 ✅** |
 
 ## Roadmap
 
@@ -32,9 +32,11 @@ Delivery is phased. Each phase ships its own in-app help, documentation and diag
    enrichment, and an integration guide for each.
 4. **Phase 4.** Okta SAML and SP metadata, SailPoint mapping and SCIM, alerts and scheduling,
    custom roles, setup wizards, identity flow and sequence diagrams.
-5. **Phase 5 (this release).** Security News and the AI provider layer with AI features.
-6. **Phase 6.** Hardening, Terraform, DR/network diagrams, STRIDE threat model, DFDs, runbooks, guided
+5. **Phase 5.** Security News and the AI provider layer with AI features.
+6. **Phase 6 (1.0.0).** Hardening, Terraform, DR/network diagrams, STRIDE threat model, DFDs, runbooks, guided
    tours, DOCX and standalone HTML exports.
+
+All six phases are delivered in 1.0.0. OIDC sign-in remains deferred (SAML 2.0 is supported).
 
 ## Where to start
 
