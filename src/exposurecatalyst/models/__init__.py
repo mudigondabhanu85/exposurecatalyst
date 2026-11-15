@@ -29,7 +29,7 @@ from exposurecatalyst.models.sso import (
     ScimGroupMember,
     ScimToken,
 )
-from exposurecatalyst.models.system import AppSetting, AuditLog
+from exposurecatalyst.models.system import AppSetting, AuditLog, TlsCertificate, TlsCsr
 
 __all__ = [
     "Advisory",
@@ -60,6 +60,8 @@ __all__ = [
     "IntegrationCveCheck",
     "IntegrationVulnMap",
     "AuditLog",
+    "TlsCertificate",
+    "TlsCsr",
     "Cve",
     "CveEvent",
     "CveProduct",

@@ -51,6 +51,18 @@ def _add_jobs(scheduler, settings: Settings) -> None:
         next_run_time=utcnow(),
         replace_existing=True,
     )
+    scheduler.add_job(_tls_expiry, "interval", hours=6, args=[settings], id="tls-expiry", max_instances=1,
+                      coalesce=True, replace_existing=True)
+
+
+def _tls_expiry(settings: Settings) -> None:
+    from exposurecatalyst import tls
+
+    try:
+        with get_session_factory()() as db:
+            tls.expiry_alerts(db, settings)
+    except Exception:  # noqa: BLE001 - never let a reminder break the scheduler
+        log.exception("tls_expiry_check_failed")
 
 
 def start_background(settings: Settings) -> BackgroundScheduler:

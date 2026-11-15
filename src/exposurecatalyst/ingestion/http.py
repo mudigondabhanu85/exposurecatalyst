@@ -87,6 +87,9 @@ class SourceClient:
         self.sleep = sleep
         self.limiter = RateLimiter(rate, per, sleep=sleep)
         self.retry_status = set(RETRY_STATUS)  # connectors may add vendor-specific throttling codes
+        from exposurecatalyst.tls import apply_trusted_ca
+
+        apply_trusted_ca(settings)  # trusted CA bundle (Certificates & Domain / EXCAT_CA_BUNDLE); no-op when none
         self.client = httpx.Client(
             timeout=timeout or settings.http_timeout_seconds,
             headers={"User-Agent": settings.http_user_agent, **(headers or {})},

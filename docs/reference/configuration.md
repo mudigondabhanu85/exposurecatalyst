@@ -13,6 +13,20 @@ Every setting is an environment variable with the `EXCAT_` prefix (also read fro
 | `EXCAT_API_DOCS_ENABLED` | `bool` | `True` | Serve Swagger UI at /api/docs and ReDoc at /api/redoc. |
 | `EXCAT_METRICS_ENABLED` | `bool` | `True` | Expose Prometheus metrics at /metrics (block this path at the load balancer). |
 | `EXCAT_CORS_ORIGINS` | `str` | `` | Comma-separated extra origins allowed for CORS and state-changing requests. |
+| `EXCAT_FQDN` | `str | None` | — | Public hostname (e.g. `exposurecatalyst.company.com`). When set, the public URL becomes `https://<fqdn>[:https_port]` and drives SAML/OIDC URLs, email links, allowed hosts and CSRF origins. Unset = previous behaviour (EXCAT_PUBLIC_URL). The Docker deployment defaults it to `localhost`. |
+| `EXCAT_HTTPS_PORT` | `int | None` | — | External HTTPS port (default 443). |
+| `EXCAT_HTTP_PORT` | `int | None` | — | External HTTP port that redirects to HTTPS (Docker; default 80). |
+| `EXCAT_TLS_MODE` | `Literal` | `self-signed` | Docker proxy certificate source (see Settings → Certificates & Domain). |
+| `EXCAT_HSTS` | `bool | None` | — | Send Strict-Transport-Security. Unset = previous behaviour (sent when EXCAT_COOKIE_SECURE is true). |
+| `EXCAT_HSTS_MAX_AGE_SECONDS` | `int` | `63072000` | HSTS max-age (default two years). |
+| `EXCAT_TRUSTED_PROXIES` | `str` | `` | Load balancers in front of the Docker proxy whose X-Forwarded-* headers are trusted (CIDRs; read by run.sh/compose). |
+| `EXCAT_OUTBOUND_PROXY` | `str` | `` | Corporate HTTP(S) proxy for outbound calls (exported as HTTPS_PROXY/HTTP_PROXY by run.sh). |
+| `EXCAT_TIMEZONE` | `str` | `UTC` | Container timezone for logs (TZ). The app stores and computes in UTC. |
+| `EXCAT_DEPLOYMENT` | `Literal` | `standalone` | Set to `docker` by docker-compose; enables Docker-only defaults (fqdn=localhost). |
+| `EXCAT_CERTS_DIR` | `Path` | /var/lib/excat/certs | Docker certs volume (proxy certificate, trusted CA bundle). Absent outside Docker. |
+| `EXCAT_SETUP_TOKEN_HOURS` | `int` | `24` | Validity of the first-run setup token. |
+| `EXCAT_CONFIG_FILE` | `str | None` | — | Path to the YAML config file. Read only when set (docker compose / run.sh point it at config/exposurecatalyst.yaml). |
+| `EXCAT_FEATURES` | `Features` | `PydanticUndefined` | Feature flags (`features.<name>` in YAML, `EXCAT_FEATURES__<NAME>` in the environment). |
 | `EXCAT_DATABASE_URL` | `SecretStr` | `sqlite:///./exposurecatalyst.db` | SQLAlchemy URL, e.g. `postgresql+psycopg://user:pass@host:5432/excat?sslmode=require`. SQLite is for development only. |
 | `EXCAT_DATABASE_PASSWORD` | `pydantic.types.SecretStr | None` | — | Database password injected separately (e.g. ECS secret from the RDS-managed secret's `password` field). When set, it is inserted into EXCAT_DATABASE_URL, which then needs no password. |
 | `EXCAT_DB_POOL_SIZE` | `int` | `10` | Connection pool size (non-SQLite). |

@@ -109,9 +109,9 @@ export interface Template { id: number; name: string; kind: string; description:
 export interface DistList { id: number; name: string; description: string | null; to_addrs: string[]; cc_addrs: string[]; bcc_addrs: string[] }
 
 /** Multipart upload (CSRF header included); the JSON helper above is for everything else. */
-export async function upload<T>(path: string, form: FormData): Promise<T> {
+export async function upload<T>(path: string, form: FormData, method: "POST" | "PUT" = "POST"): Promise<T> {
   const m = document.cookie.match(/(?:^|;\s*)(?:__Host-)?excat_csrf=([^;]+)/);
-  const res = await fetch(path, { method: "POST", body: form, credentials: "same-origin", headers: { "X-CSRF-Token": m ? decodeURIComponent(m[1]) : "" } });
+  const res = await fetch(path, { method, body: form, credentials: "same-origin", headers: { "X-CSRF-Token": m ? decodeURIComponent(m[1]) : "" } });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new ApiError(res.status, (data as { detail?: unknown }).detail ?? `HTTP ${res.status}`);
   return data as T;

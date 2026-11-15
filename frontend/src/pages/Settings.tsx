@@ -10,6 +10,7 @@ import SsoSettings from "./Sso";
 import AlertsSettings from "./Alerts";
 import AiSettings from "./AiSettings";
 import DatabaseSettings from "./Database";
+import CertificatesSettings from "./Certificates";
 import { EmptyState, ErrorNote, HealthBadge, PageHeader } from "../components/ui";
 
 interface Role { id: number; name: string; description: string | null; is_system: boolean; permissions: string[]; user_count: number }
@@ -21,6 +22,7 @@ const SUBTABS: { to: string; label: string; perm: string; phase?: number }[] = [
   { to: "sso", label: "Identity & SSO", perm: "sso:manage" },
   { to: "rbac", label: "Users & RBAC", perm: "user:manage" },
   { to: "database", label: "Database", perm: "settings:manage" },
+  { to: "certificates", label: "Certificates & Domain", perm: "settings:manage" },
   { to: "integrations", label: "Integrations", perm: "integration:manage" },
   { to: "smtp", label: "SMTP", perm: "settings:manage" },
   { to: "sources", label: "CVE Sources", perm: "source:manage" },
@@ -31,7 +33,11 @@ const SUBTABS: { to: string; label: string; perm: string; phase?: number }[] = [
 
 export default function SettingsPage() {
   const { can } = useAuth();
-  const visible = SUBTABS.filter((t) => can(t.perm));
+  // Certificates & Domain: only where it applies (Docker proxy deployment or an FQDN) — otherwise unchanged.
+  const dep = useQuery({ queryKey: ["deployment"], enabled: can("settings:manage"), staleTime: 300_000,
+                         queryFn: () => api<{ deployment: string; fqdn: string | null }>("/api/system/deployment") });
+  const certTab = !!dep.data && (dep.data.deployment === "docker" || !!dep.data.fqdn);
+  const visible = SUBTABS.filter((t) => can(t.perm) && (t.to !== "certificates" || certTab));
   return (
     <div className="flex flex-col gap-6 md:flex-row">
       <nav aria-label="Settings" className="md:w-56">
@@ -57,6 +63,7 @@ export default function SettingsPage() {
           <Route path="news" element={can("news:manage") ? <NewsFeedsSettings /> : <Forbidden />} />
           <Route path="ai" element={can("ai:manage") ? <AiSettings /> : <Forbidden />} />
           <Route path="database" element={can("settings:manage") ? <DatabaseSettings /> : <Forbidden />} />
+          <Route path="certificates" element={can("settings:manage") ? <CertificatesSettings /> : <Forbidden />} />
           {SUBTABS.filter((t) => t.phase).map((t) => (
             <Route key={t.to} path={t.to} element={can(t.perm) ? (
               <><PageHeader title={t.label} helpId="help-center" /><EmptyState title={`${t.label} arrives in Phase ${t.phase}`} why="This settings area is part of the delivery plan and will include a step-by-step setup wizard with Test validation at each step." /></>

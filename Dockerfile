@@ -56,13 +56,14 @@ RUN addgroup -g 10001 excat && adduser -S -D -H -u 10003 -G excat excatproxy \
  && install -d -o 10003 -g 10001 -m 0750 /data /config && install -d -o 10003 -g 10001 -m 0770 /run/caddy-admin \
  && install -d -o 10001 -g 10001 -m 0750 /var/lib/excat/certs
 COPY docker/caddy/Caddyfile /etc/caddy/Caddyfile
+COPY --chmod=0755 docker/caddy/entrypoint.sh /usr/local/bin/excat-proxy
 COPY --from=ui /ui/frontend/dist/assets /srv/assets
 ENV XDG_DATA_HOME=/data XDG_CONFIG_HOME=/config
 USER 10003:10001
 EXPOSE 8080 8443
 HEALTHCHECK --interval=15s --timeout=3s --start-period=10s --retries=3 \
   CMD wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1
-CMD ["caddy", "run", "--config", "/etc/caddy/Caddyfile", "--adapter", "caddyfile"]
+CMD ["/usr/local/bin/excat-proxy"]
 
 # ---- 5. Runtime (default target: keep this stage LAST so `docker build .` builds the app) ----
 FROM ${DOCKERHUB}/library/python:3.12.16-slim-bookworm@sha256:935c3c5b12357a7e10caa9c1e6ca5692344d97cf229832ef584be2cec9fc03df AS runtime
@@ -85,6 +86,8 @@ COPY alembic.ini CHANGELOG.md ./
 COPY migrations ./migrations
 COPY docs/help ./docs/help
 COPY brand/assets/png ./brand/assets/png
+# Default proxy configuration: the api posts it to the proxy's admin socket when (re)loading certificates
+COPY docker/caddy/Caddyfile ./docker/caddy/Caddyfile
 COPY --from=ui /ui/frontend/dist ./frontend/dist
 COPY --from=docs /app/dist/docs/site ./dist/docs/site
 COPY --from=docs /app/dist/docs/exports ./dist/docs/exports
@@ -96,7 +99,8 @@ ENV PATH=/opt/venv/bin:$PATH \
     EXCAT_DOCS_EXPORTS_DIR=/app/dist/docs/exports \
     EXCAT_HELP_DIR=/app/docs/help \
     EXCAT_BRAND_DIR=/app/brand \
-    EXCAT_CHANGELOG_PATH=/app/CHANGELOG.md
+    EXCAT_CHANGELOG_PATH=/app/CHANGELOG.md \
+    EXCAT_PROXY_CADDYFILE=/app/docker/caddy/Caddyfile
 USER 10001
 EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
