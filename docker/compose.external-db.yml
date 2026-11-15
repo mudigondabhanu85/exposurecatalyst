@@ -1,0 +1,21 @@
+# External database: don't start the bundled PostgreSQL.
+#   COMPOSE_FILE=docker-compose.yml:docker/compose.external-db.yml   (in .env)
+#   EXCAT_DATABASE_URL=postgresql+psycopg://user:pass@db.example.internal:5432/excat?sslmode=verify-full
+# Any engine supported by Settings → Database works (MySQL/MariaDB, MSSQL, Oracle need the matching extra in
+# the image). The app reaches the database over the `egress` network.
+services:
+  postgres:
+    profiles: [bundled-db]
+  migrate:
+    environment:
+      EXCAT_DATABASE_PASSWORD_FILE: ""
+    networks: [backend, egress]
+  api:
+    environment:
+      EXCAT_DATABASE_PASSWORD_FILE: ""
+  scheduler:
+    environment:
+      EXCAT_DATABASE_PASSWORD_FILE: ""
+  worker:
+    environment:
+      EXCAT_DATABASE_PASSWORD_FILE: ""

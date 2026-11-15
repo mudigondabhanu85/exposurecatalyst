@@ -10,3 +10,20 @@ dist
 *.db
 .env
 .excat-dev.key
+# Added for the Docker deployment: never ship secrets, local state or VCS metadata in images
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+.run
+logs
+backups
+config/exposurecatalyst.yaml
+node_modules
+**/node_modules
+.github
+infra
+exposurecatalyst-brand.zip
+.DS_Store

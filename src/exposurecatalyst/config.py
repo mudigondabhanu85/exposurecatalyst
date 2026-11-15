@@ -1,24 +1,57 @@
 """Application settings.
 
-Every setting is read from an ``EXCAT_``-prefixed environment variable (or ``.env``).
+Every setting is read from an ``EXCAT_``-prefixed environment variable (or ``.env``). Any setting can
+instead be read from a file named by ``EXCAT_<NAME>_FILE`` (Docker secrets / the bootstrap's secrets
+volume); an explicitly set, non-empty ``EXCAT_<NAME>`` always wins over the file.
 Field descriptions are the source for ``docs/reference/configuration.md`` — keep them accurate.
 """
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic.fields import FieldInfo
+from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 
 def _csv(value: str) -> list[str]:
     return [v.strip() for v in value.split(",") if v.strip()]
+
+
+class FileSecretsSource(PydanticBaseSettingsSource):
+    """``EXCAT_<NAME>_FILE=/path`` → value of setting ``<name>`` (trailing newline stripped).
+
+    Used only when ``EXCAT_<NAME>`` is unset or empty in both the environment and ``.env``, so existing
+    deployments that set values directly behave exactly as before.
+    """
+
+    def __init__(self, settings_cls: type[BaseSettings], dotenv: dict[str, Any]):
+        super().__init__(settings_cls)
+        self._dotenv = {k.lower(): v for k, v in dotenv.items()}
+
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:  # pragma: no cover
+        return None, field_name, False
+
+    def __call__(self) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for name in self.settings_cls.model_fields:
+            env = f"EXCAT_{name.upper()}"
+            explicit = os.environ.get(env) or self._dotenv.get(name) or self._dotenv.get(env.lower())
+            path = os.environ.get(f"{env}_FILE")
+            if explicit or not path:
+                continue
+            try:
+                out[name] = Path(path).read_text(encoding="utf-8").rstrip("\r\n")
+            except OSError as exc:
+                raise ValueError(f"{env}_FILE: cannot read {path}: {exc.strerror}") from exc
+        return out
 
 
 class Settings(BaseSettings):
@@ -189,6 +222,13 @@ class Settings(BaseSettings):
     changelog_path: Path = Field(PROJECT_ROOT / "CHANGELOG.md", description="Changelog shown in Help Center → What's new.")
 
     # ---------------------------------------------------------------------------------------
+    @classmethod
+    def settings_customise_sources(cls, settings_cls, init_settings, env_settings, dotenv_settings,
+                                   file_secret_settings):
+        dotenv = dotenv_settings() if callable(dotenv_settings) else {}
+        files = FileSecretsSource(settings_cls, dotenv)
+        return init_settings, files, env_settings, dotenv_settings, file_secret_settings  # files: only fills gaps
+
     @property
     def cors_origin_list(self) -> list[str]:
         return _csv(self.cors_origins)

@@ -90,3 +90,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: docker build -t exposurecatalyst:${{ github.sha }} .
+      - run: docker build --target proxy -t exposurecatalyst-proxy:${{ github.sha }} .
+      - name: Trivy image scan (fixable HIGH/CRITICAL fail the build)
+        run: |
+          mkdir -p "$RUNNER_TEMP/scan"
+          for img in exposurecatalyst exposurecatalyst-proxy; do   # scans a saved tarball: no Docker socket mount
+            docker save -o "$RUNNER_TEMP/scan/$img.tar" "$img:${{ github.sha }}"
+            docker run --rm -v "$RUNNER_TEMP/scan:/scan:ro" -v "$PWD/docker/trivy-secret.yaml:/cfg/secret.yaml:ro" \
+              aquasec/trivy:0.57.1 image --quiet --input "/scan/$img.tar" --secret-config /cfg/secret.yaml \
+              --severity HIGH,CRITICAL --ignore-unfixed --exit-code 1
+          done
+
+  compose-smoke:
+    needs: [backend, frontend]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: docker compose up → wait for health → HTTPS checks via the proxy → tear down
+        run: ./docker/smoke.sh

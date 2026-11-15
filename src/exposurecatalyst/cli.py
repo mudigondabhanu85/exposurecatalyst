@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import getpass
+import os
 import sys
 from datetime import UTC, datetime
 
@@ -59,8 +60,44 @@ def cmd_serve(args) -> int:
     import uvicorn
 
     uvicorn.run("exposurecatalyst.main:app_factory", factory=True, host=args.host, port=args.port,
-                proxy_headers=True, forwarded_allow_ips=args.forwarded_allow_ips, reload=args.reload)
+                proxy_headers=True, forwarded_allow_ips=args.forwarded_allow_ips, reload=args.reload,
+                workers=None if args.reload else args.workers)
     return 0
+
+
+def cmd_bootstrap(_args) -> int:
+    from exposurecatalyst.bootstrap import run
+
+    return run()
+
+
+def cmd_healthcheck(args) -> int:
+    """Container healthchecks without curl/wget in the image."""
+    import time
+    import urllib.request
+
+    if args.target == "scheduler":
+        from exposurecatalyst.ingestion.scheduler import HEARTBEAT
+
+        if HEARTBEAT is None:
+            print("EXCAT_SCHEDULER_HEARTBEAT is not set", file=sys.stderr)
+            return 1
+        try:
+            age = time.time() - HEARTBEAT.stat().st_mtime
+        except OSError:
+            return 1
+        return 0 if age < args.max_age else 1
+    from urllib.parse import urlsplit
+
+    parts = urlsplit(args.url)
+    if parts.scheme not in ("http", "https") or parts.hostname not in ("127.0.0.1", "localhost", "::1"):
+        print("healthcheck URL must be http(s) on loopback", file=sys.stderr)
+        return 2
+    try:
+        with urllib.request.urlopen(args.url, timeout=3) as r:  # noqa: S310  # nosec B310 - scheme/host checked above
+            return 0 if r.status == 200 else 1
+    except OSError:
+        return 1
 
 
 def cmd_scheduler(_args) -> int:
@@ -218,8 +255,19 @@ def main(argv: list[str] | None = None) -> int:
     sv.add_argument("--host", default="127.0.0.1")
     sv.add_argument("--port", type=int, default=8000)
     sv.add_argument("--reload", action="store_true")
-    sv.add_argument("--forwarded-allow-ips", default="127.0.0.1")
+    sv.add_argument("--forwarded-allow-ips", default="127.0.0.1",
+                    help="Proxies trusted for X-Forwarded-For/Proto: IPs or CIDRs, comma-separated")
+    sv.add_argument("--workers", type=int, default=int(os.environ.get("EXCAT_WEB_CONCURRENCY", "1")),
+                    help="Worker processes (default 1; login rate limits are per process)")
     sv.set_defaults(fn=cmd_serve)
+
+    sub.add_parser("bootstrap", help="Docker first start: generate missing secrets and a self-signed "
+                   "certificate (never overwrites)").set_defaults(fn=cmd_bootstrap)
+    hc = sub.add_parser("healthcheck", help="Container healthcheck")
+    hc.add_argument("target", choices=["api", "scheduler"])
+    hc.add_argument("--url", default="http://127.0.0.1:8000/api/health/live")
+    hc.add_argument("--max-age", type=int, default=300, help="scheduler: max heartbeat age in seconds")
+    hc.set_defaults(fn=cmd_healthcheck)
 
     sub.add_parser("scheduler", help="Run the ingestion scheduler").set_defaults(fn=cmd_scheduler)
 
