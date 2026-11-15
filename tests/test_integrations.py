@@ -164,7 +164,7 @@ def test_field_mapping_paths():
 
 def test_catalog_and_rbac(admin, login):
     kinds = {c["kind"] for c in admin.get("/api/integrations/catalog").json()}
-    assert kinds == {"qualys", "tanium", "wiz", "zafran", "armorcode", "servicenow_cmdb"}
+    assert {"qualys", "tanium", "wiz", "zafran", "armorcode", "servicenow_cmdb"} <= kinds and len(kinds) == 28
     analyst = login("Security Analyst", username="ana")
     assert analyst.get("/api/integrations").status_code == 403
     assert analyst.post("/api/integrations", json={}).status_code == 403

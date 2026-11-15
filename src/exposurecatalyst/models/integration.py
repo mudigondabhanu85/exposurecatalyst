@@ -79,3 +79,22 @@ class IntegrationVulnMap(Base):
     integration_id: Mapped[int] = mapped_column(ForeignKey("integrations.id", ondelete="CASCADE"), index=True)
     cve_id: Mapped[str] = mapped_column(String(32), index=True)
     external_id: Mapped[str] = mapped_column(String(64))
+
+
+class AdvisoryAction(Base):
+    """A ticket created / message posted for an advisory through an action connector (Jira, ServiceNow ITSM,
+    Slack, Teams). Kept even if the integration is later deleted (integration_id → NULL)."""
+
+    __tablename__ = "advisory_actions"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    advisory_id: Mapped[int] = mapped_column(ForeignKey("advisories.id", ondelete="CASCADE"), index=True)
+    integration_id: Mapped[int | None] = mapped_column(ForeignKey("integrations.id", ondelete="SET NULL"))
+    integration_name: Mapped[str] = mapped_column(String(100))
+    kind: Mapped[str] = mapped_column(String(32))
+    status: Mapped[str] = mapped_column(String(16))  # ok | error
+    external_ref: Mapped[str | None] = mapped_column(String(200))
+    external_url: Mapped[str | None] = mapped_column(String(1000))
+    error: Mapped[str | None] = mapped_column(Text)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"))
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)

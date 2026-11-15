@@ -10,7 +10,13 @@ from exposurecatalyst.models.advisory import (
 )
 from exposurecatalyst.models.cve import Cve, CveEvent, CveProduct, JobRun, SavedSearch, SourceState
 from exposurecatalyst.models.identity import Role, RolePermission, User, UserSession, user_roles
-from exposurecatalyst.models.integration import AssetFinding, Integration, IntegrationCveCheck, IntegrationVulnMap
+from exposurecatalyst.models.integration import (
+    AdvisoryAction,
+    AssetFinding,
+    Integration,
+    IntegrationCveCheck,
+    IntegrationVulnMap,
+)
 from exposurecatalyst.models.phase5 import AiProvider, AiUsage, NewsFeed, NewsItem
 from exposurecatalyst.models.sso import (
     AlertEvent,
@@ -27,6 +33,7 @@ from exposurecatalyst.models.system import AppSetting, AuditLog
 
 __all__ = [
     "Advisory",
+    "AdvisoryAction",
     "AdvisoryAsset",
     "AdvisoryDelivery",
     "AdvisorySequence",
