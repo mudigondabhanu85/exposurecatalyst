@@ -14,7 +14,7 @@ stakeholder advisory emails.
 |---|---|---|
 | **CVE Intelligence** | Normalized, de-duplicated CVEs from NVD, CISA KEV and FIRST EPSS, with per-field provenance, search, filters, saved searches, a timeline and source health | **Phase 1 ✅** |
 | **Advisory Email Generator** | HTML advisories, an asset validation matrix, an Excel attachment, `.eml` / Copy for Outlook / SMTP delivery and an approval workflow | **Phase 2 ✅** |
-| **Integrations** | Plugin connectors for Qualys, Tanium, Wiz, Zafran, ArmorCode, ServiceNow CMDB and more | **Phase 3 ✅** |
+| **Integrations** | 24 asset-source connectors (vulnerability, cloud, AppSec, CAASM, CTEM) plus Jira, ServiceNow ITSM, Slack and Teams action connectors | **Phase 3 ✅ · 1.2.0** |
 | **Identity** | Okta SAML 2.0 or OpenID Connect, SailPoint group → role mapping (SCIM 2.0), alerts and scheduling | **Phase 4 ✅** (+ OIDC in 1.1.0) |
 | **Security News & AI** | De-duplicated news feeds, a multi-provider AI layer with a redaction policy | **Phase 5 ✅** |
 | **Hardening & exports** | Terraform, DR and network diagrams, threat model, runbooks, guided tours, DOCX/standalone HTML docs | **Phase 6 ✅** |
@@ -36,7 +36,8 @@ Delivery is phased. Each phase ships its own in-app help, documentation and diag
 6. **Phase 6 (1.0.0).** Hardening, Terraform, DR/network diagrams, STRIDE threat model, DFDs, runbooks, guided
    tours, DOCX and standalone HTML exports.
 
-All six phases were delivered in 1.0.0. 1.1.0 adds OpenID Connect sign-in as the alternative to SAML.
+All six phases were delivered in 1.0.0. 1.1.0 adds OpenID Connect sign-in as the alternative to SAML and the
+Database settings page. 1.2.0 adds the spec's additional connectors (22 more) and advisory tickets & sharing.
 
 ## Where to start
 

@@ -98,12 +98,34 @@ nav:
           - ADR-0005 Content Security Policy scoping: architecture/adr/0005-csp-scoping.md
   - Integrations:
       - integrations/index.md
-      - Qualys VMDR: integrations/qualys.md
-      - Tanium: integrations/tanium.md
-      - Wiz: integrations/wiz.md
-      - Zafran: integrations/zafran.md
-      - ArmorCode: integrations/armorcode.md
-      - ServiceNow CMDB: integrations/servicenow-cmdb.md
+      - "CrowdStrike Falcon Spotlight": integrations/crowdstrike.md
+      - "Microsoft Defender Vulnerability Management": integrations/defender.md
+      - "Qualys VMDR": integrations/qualys.md
+      - "Rapid7 InsightVM": integrations/rapid7.md
+      - "Tanium": integrations/tanium.md
+      - "Tenable Security Center (Tenable.sc)": integrations/tenable-sc.md
+      - "Tenable Vulnerability Management (Tenable.io)": integrations/tenable.md
+      - "Orca Security": integrations/orca.md
+      - "Prisma Cloud (Compute / CWPP)": integrations/prisma-cloud.md
+      - "Wiz": integrations/wiz.md
+      - "Checkmarx One": integrations/checkmarx.md
+      - "Mend.io": integrations/mend.md
+      - "Snyk": integrations/snyk.md
+      - "Armis Centrix": integrations/armis.md
+      - "Axonius": integrations/axonius.md
+      - "runZero": integrations/runzero.md
+      - "ServiceNow CMDB": integrations/servicenow-cmdb.md
+      - "ArmorCode": integrations/armorcode.md
+      - "Brinqa": integrations/brinqa.md
+      - "Cisco Vulnerability Management (Kenna)": integrations/kenna.md
+      - "Nucleus Security": integrations/nucleus.md
+      - "Vulcan Cyber": integrations/vulcan.md
+      - "XM Cyber": integrations/xm-cyber.md
+      - "Zafran": integrations/zafran.md
+      - "Jira (Cloud / Data Center)": integrations/jira.md
+      - "ServiceNow ITSM": integrations/servicenow-itsm.md
+      - "Microsoft Teams": integrations/teams.md
+      - "Slack": integrations/slack.md
   - Security:
       - Security overview: security/overview.md
       - Threat model (STRIDE): security/threat-model.md

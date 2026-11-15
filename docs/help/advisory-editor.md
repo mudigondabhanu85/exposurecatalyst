@@ -36,6 +36,13 @@ right side shows a live preview of the exact email.
    - **Download .eml** opens in Outlook as an editable draft (`X-Unsent: 1`), with the Excel file attached.
    - **Excel**, **HTML** and **PDF** download those formats.
 
+### Tickets & sharing
+
+When Jira, ServiceNow ITSM, Slack or Teams integrations are enabled, an approved (or sent) advisory shows
+**Tickets & sharing**. Users with `advisory:send` can create a ticket (summary, severity-based priority,
+affected-asset count, remediation and a link back to the advisory) or post the advisory to a channel. Each
+attempt is listed with its ticket number or error, and is recorded in the audit trail.
+
 ## Fields and columns
 
 | Field | Meaning |

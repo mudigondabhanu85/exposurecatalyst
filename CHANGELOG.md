@@ -3,6 +3,38 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.2.0] — 2026-11-14 — Additional connectors, tickets & sharing
+
+### Added
+- **18 more asset-source connectors** (the spec's *Additional connectors*): Tenable Vulnerability Management
+  and Tenable Security Center, Rapid7 InsightVM, CrowdStrike Falcon Spotlight, Microsoft Defender
+  Vulnerability Management, Prisma Cloud (Compute), Orca, Snyk, Brinqa, Cisco Vulnerability Management
+  (Kenna), Vulcan, Axonius, Armis, runZero, Nucleus, XM Cyber, Checkmarx One and Mend. Each has region
+  presets where the vendor has regions, least-privilege prerequisites, a default field map and an
+  integration guide.
+- **Action connectors**: Jira (Cloud and Data Center), ServiceNow ITSM, Slack (bot token or incoming
+  webhook) and Microsoft Teams (Workflows webhook). From an approved or sent advisory, users with
+  `advisory:send` can create a ticket or post it under the new **Tickets & sharing** panel. Every attempt
+  is recorded (migration `0007`, `advisory_actions`) and audited (`advisory.ticket_created` /
+  `advisory.shared`). Action connectors are never queried for assets.
+- Connector catalog is grouped by category, with a filter box and an **API defaults** badge. *Documented
+  API* means it follows the vendor's public reference. *Confirm defaults* means the reference is
+  tenant-gated, so the endpoint, filter, body and field map are editable settings to confirm per tenant.
+- Configurable REST connector: `{setting}` path variables, JSON body templates (`"{{cve}}"`,
+  `"{{limit}}"`), and offset pagination inside POST bodies.
+- Field mapping understands epoch-second and epoch-millisecond dates.
+
+### Fixed
+- CrowdStrike's OAuth token endpoint answers `201 Created`, which is now accepted.
+
+### Security
+- Self-hosted tools (Tenable Security Center, on-prem Axonius and Jira Data Center) have no SaaS domain,
+  so their host must be in `EXCAT_EGRESS_ALLOWLIST`.
+- Token endpoints on other hosts (Entra ID, Checkmarx IAM) are allowed for egress but rejected as base URLs.
+- Slack and Teams webhook URLs are validated (https, vendor host) when saved and again when used.
+- OData `nextLink` pagination from Defender is followed only on the same host.
+- Values interpolated into vendor query languages (FQL, AQL, OData, Kenna search) are sanitized.
+
 ## [1.1.0] — 2026-11-14 — OpenID Connect sign-in
 
 ### Added
