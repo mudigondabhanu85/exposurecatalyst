@@ -219,45 +219,111 @@ function RbacSettings() {
   );
 }
 
-interface SmtpCfg { configured: boolean; host?: string; port?: number; security?: string; username?: string | null; has_password?: boolean; from_address?: string; from_name?: string | null; reply_to?: string | null }
+interface SmtpCfg {
+  configured: boolean; provider?: "smtp" | "ses_api"; auth?: "password" | "oauth2_m365"; host?: string | null; port?: number | null;
+  security?: string | null; username?: string | null; has_password?: boolean; from_address?: string; from_name?: string | null; reply_to?: string | null;
+  m365_tenant_id?: string | null; m365_client_id?: string | null; has_m365_client_secret?: boolean; m365_cloud?: string;
+  ses_region?: string | null; ses_configuration_set?: string | null;
+}
+type Method = "password" | "m365" | "ses_api";
+interface Preset { id: string; label: string; provider: "smtp" | "ses_api"; auth?: string; host?: string; port?: number; security?: string; m365_cloud?: string }
+
+const METHODS: { id: Method; label: string; hint: string }[] = [
+  { id: "password", label: "SMTP relay — username & password", hint: "Any relay, including Amazon SES SMTP credentials." },
+  { id: "m365", label: "Microsoft 365 — OAuth2", hint: "Entra ID app (client credentials) with SMTP.SendAsApp. No mailbox password stored." },
+  { id: "ses_api", label: "Amazon SES — API (IAM role)", hint: "SESv2 SendEmail with the task's IAM role. No keys stored." },
+];
 
 function SmtpSettings() {
   const qc = useQueryClient();
   const q = useQuery({ queryKey: ["smtp"], queryFn: () => api<SmtpCfg>("/api/settings/smtp") });
+  const presets = useQuery({ queryKey: ["smtp-presets"], queryFn: () => api<Preset[]>("/api/settings/smtp/presets") });
   const [msg, setMsg] = useState<string | null>(null);
+  const [method, setMethod] = useState<Method | null>(null);
+  const [form, setForm] = useState<Record<string, string>>({});
   const save = useMutation({ mutationFn: (body: Record<string, unknown>) => api<SmtpCfg>("/api/settings/smtp", { method: "PUT", body }),
                              onSuccess: (d) => { qc.setQueryData(["smtp"], d); setMsg("Saved."); } });
-  const test = useMutation({ mutationFn: (to: string) => api("/api/settings/smtp/test", { method: "POST", body: { to } }), onSuccess: () => setMsg("Test email sent.") });
+  const test = useMutation({ mutationFn: (to: string) => api<{ message_id?: string }>("/api/settings/smtp/test", { method: "POST", body: { to } }),
+                             onSuccess: () => setMsg("Test email sent.") });
   const c = q.data;
   if (!c) return null;
+  const m: Method = method ?? (c.provider === "ses_api" ? "ses_api" : c.auth === "oauth2_m365" ? "m365" : "password");
+  const val = (k: keyof SmtpCfg, dflt = "") => form[k] ?? (c[k] == null ? dflt : String(c[k]));
+  const setVal = (k: string) => (e: { target: { value: string } }) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const applyPreset = (id: string) => {
+    const p = presets.data?.find((x) => x.id === id);
+    if (!p) return;
+    setMethod(p.provider === "ses_api" ? "ses_api" : p.auth === "oauth2_m365" ? "m365" : "password");
+    setForm((f) => ({ ...f, ...(p.host ? { host: p.host } : {}), ...(p.port ? { port: String(p.port) } : {}),
+                      ...(p.security ? { security: p.security } : {}), ...(p.m365_cloud ? { m365_cloud: p.m365_cloud } : {}) }));
+  };
   const submit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const fd = new FormData(e.currentTarget);
-    const body: Record<string, unknown> = { host: fd.get("host"), port: Number(fd.get("port")), security: fd.get("security"),
-      username: fd.get("username") || null, from_address: fd.get("from_address"), from_name: fd.get("from_name") || null, reply_to: fd.get("reply_to") || null };
-    if (fd.get("password")) body.password = fd.get("password");
+    const g = (k: string) => { const v = fd.get(k); return v === null || v === "" ? null : String(v); };
+    const body: Record<string, unknown> = { provider: m === "ses_api" ? "ses_api" : "smtp", auth: m === "m365" ? "oauth2_m365" : "password",
+      from_address: g("from_address"), from_name: g("from_name"), reply_to: g("reply_to") };
+    if (m === "ses_api") Object.assign(body, { ses_region: g("ses_region"), ses_configuration_set: g("ses_configuration_set") });
+    else Object.assign(body, { host: g("host"), port: Number(fd.get("port")), security: g("security"), username: g("username") });
+    if (m === "password" && g("password")) body.password = g("password");
+    if (m === "m365") Object.assign(body, { m365_tenant_id: g("m365_tenant_id"), m365_client_id: g("m365_client_id"), m365_cloud: g("m365_cloud") ?? "global",
+                                            ...(g("m365_client_secret") ? { m365_client_secret: g("m365_client_secret") } : {}) });
     save.mutate(body);
   };
   return (
     <>
-      <PageHeader title="SMTP" helpId="settings-smtp" subtitle="Outbound relay for advisory emails (Microsoft 365, Amazon SES or a corporate relay)" />
+      <PageHeader title="SMTP" helpId="settings-smtp" subtitle="Outbound mail for advisories and alerts: SMTP relay, Microsoft 365 (OAuth2) or Amazon SES" />
       {msg && <p role="status" className="mb-3 rounded-sm bg-ec-surface-alt px-3 py-2 text-sm">{msg}</p>}
       <ErrorNote error={save.error ?? test.error} />
-      <form onSubmit={submit} className="card mb-4 grid gap-3 md:grid-cols-3" key={String(c.host)}>
-        <div><label className="label" htmlFor="h">Host</label><input id="h" name="host" className="input w-full" defaultValue={c.host ?? ""} placeholder="smtp.office365.com" required /></div>
-        <div><label className="label" htmlFor="pt">Port</label><input id="pt" name="port" type="number" className="input w-full" defaultValue={c.port ?? 587} required /></div>
-        <div><label className="label" htmlFor="sec">Security</label><select id="sec" name="security" className="input w-full" defaultValue={c.security ?? "starttls"}><option value="starttls">STARTTLS (587)</option><option value="ssl">SSL/TLS (465)</option><option value="none">None (dev only)</option></select></div>
-        <div><label className="label" htmlFor="un">Username</label><input id="un" name="username" className="input w-full" defaultValue={c.username ?? ""} autoComplete="off" /></div>
-        <div><label className="label" htmlFor="pw">Password</label><input id="pw" name="password" type="password" className="input w-full" autoComplete="new-password" placeholder={c.has_password ? "•••••• (stored — leave blank to keep)" : ""} /></div>
-        <div><label className="label" htmlFor="fa">From address</label><input id="fa" name="from_address" type="email" className="input w-full" defaultValue={c.from_address ?? ""} required /></div>
-        <div><label className="label" htmlFor="fn">From name</label><input id="fn" name="from_name" className="input w-full" defaultValue={c.from_name ?? "ExposureCatalyst"} /></div>
-        <div><label className="label" htmlFor="rt">Reply-To</label><input id="rt" name="reply_to" type="email" className="input w-full" defaultValue={c.reply_to ?? ""} /></div>
-        <div className="flex items-end"><button className="btn-primary">Save</button></div>
+      <form onSubmit={submit} className="card mb-4 space-y-4">
+        <div className="flex flex-wrap items-end gap-3">
+          <fieldset className="flex-1">
+            <legend className="label">Delivery method</legend>
+            <div className="grid gap-2 md:grid-cols-3">
+              {METHODS.map((x) => (
+                <label key={x.id} className={`cursor-pointer rounded-md border p-3 text-sm ${m === x.id ? "border-ec-navy bg-ec-surface-alt" : "border-ec-border"}`}>
+                  <span className="flex items-center gap-2 font-semibold"><input type="radio" name="method" checked={m === x.id} onChange={() => setMethod(x.id)} />{x.label}</span>
+                  <span className="mt-1 block text-xs text-ec-slate">{x.hint}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+          <div><label className="label" htmlFor="preset">Start from a preset</label>
+            <select id="preset" className="input w-64" value="" onChange={(e) => applyPreset(e.target.value)}>
+              <option value="">Choose…</option>{presets.data?.map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select></div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-3">
+          {m !== "ses_api" ? (<>
+            <div><label className="label" htmlFor="h">Host</label><input id="h" name="host" className="input w-full" value={val("host")} onChange={setVal("host")} placeholder={m === "m365" ? "smtp.office365.com" : "smtp.example.com"} required /></div>
+            <div><label className="label" htmlFor="pt">Port</label><input id="pt" name="port" type="number" className="input w-full" value={val("port", "587")} onChange={setVal("port")} required /></div>
+            <div><label className="label" htmlFor="sec">Security</label><select id="sec" name="security" className="input w-full" value={val("security", "starttls")} onChange={setVal("security")}><option value="starttls">STARTTLS (587)</option><option value="ssl">SSL/TLS (465)</option>{m === "password" && <option value="none">None (dev only)</option>}</select></div>
+            <div><label className="label" htmlFor="un">{m === "m365" ? "Sending mailbox" : "Username"}</label><input id="un" name="username" className="input w-full" value={val("username")} onChange={setVal("username")} autoComplete="off" required={m === "m365"} placeholder={m === "m365" ? "secops@contoso.com" : ""} /></div>
+            {m === "password" && <div><label className="label" htmlFor="pw">Password</label><input id="pw" name="password" type="password" className="input w-full" autoComplete="new-password" placeholder={c.has_password ? "•••••• (stored — leave blank to keep)" : ""} /></div>}
+          </>) : (<>
+            <div><label className="label" htmlFor="sr">SES region</label><input id="sr" name="ses_region" className="input w-full" value={val("ses_region")} onChange={setVal("ses_region")} placeholder="us-east-1" required pattern="[a-z]{2}(-gov)?-[a-z]+-\d" /></div>
+            <div><label className="label" htmlFor="cs">Configuration set (optional)</label><input id="cs" name="ses_configuration_set" className="input w-full" value={val("ses_configuration_set")} onChange={setVal("ses_configuration_set")} placeholder="excat-events" /></div>
+            <p className="self-end text-xs text-ec-slate">Credentials come from the AWS default chain (the ECS task role in the reference deployment). The From address must be a verified SES identity.</p>
+          </>)}
+          {m === "m365" && (<>
+            <div><label className="label" htmlFor="mt">Directory (tenant) ID</label><input id="mt" name="m365_tenant_id" className="input w-full" value={val("m365_tenant_id")} onChange={setVal("m365_tenant_id")} required /></div>
+            <div><label className="label" htmlFor="mc">Application (client) ID</label><input id="mc" name="m365_client_id" className="input w-full" value={val("m365_client_id")} onChange={setVal("m365_client_id")} required /></div>
+            <div><label className="label" htmlFor="ms">Client secret</label><input id="ms" name="m365_client_secret" type="password" className="input w-full" autoComplete="new-password" required={!c.has_m365_client_secret} placeholder={c.has_m365_client_secret ? "•••••• (stored — leave blank to keep)" : ""} /></div>
+            <div><label className="label" htmlFor="mcl">Cloud</label><select id="mcl" name="m365_cloud" className="input w-full" value={val("m365_cloud", "global")} onChange={setVal("m365_cloud")}><option value="global">Commercial / GCC</option><option value="usgov">GCC High / DoD</option></select></div>
+          </>)}
+          <div><label className="label" htmlFor="fa">From address</label><input id="fa" name="from_address" type="email" className="input w-full" value={val("from_address")} onChange={setVal("from_address")} required /></div>
+          <div><label className="label" htmlFor="fn">From name</label><input id="fn" name="from_name" className="input w-full" value={val("from_name", "ExposureCatalyst")} onChange={setVal("from_name")} /></div>
+          <div><label className="label" htmlFor="rt">Reply-To</label><input id="rt" name="reply_to" type="email" className="input w-full" value={val("reply_to")} onChange={setVal("reply_to")} /></div>
+        </div>
+        {m === "m365" && <p className="text-xs text-ec-slate">Entra ID app with the <strong>Office 365 Exchange Online → SMTP.SendAsApp</strong> application permission (admin consent), its service principal registered in Exchange Online, and FullAccess on the sending mailbox. See the help for the PowerShell steps.</p>}
+        <div><button className="btn-primary" disabled={save.isPending}>Save</button></div>
       </form>
       {c.configured && (
         <form className="card flex flex-wrap items-end gap-2" onSubmit={(e) => { e.preventDefault(); test.mutate(String(new FormData(e.currentTarget).get("to"))); }}>
           <div><label className="label" htmlFor="tt">Send a test email to</label><input id="tt" name="to" type="email" className="input w-72" required /></div>
           <button className="btn-secondary" disabled={test.isPending}>{test.isPending ? "Sending…" : "Send test"}</button>
+          <span className="text-xs text-ec-slate">Uses the saved settings ({c.provider === "ses_api" ? "Amazon SES API" : c.auth === "oauth2_m365" ? "Microsoft 365 OAuth2" : "SMTP"}).</span>
         </form>
       )}
     </>
