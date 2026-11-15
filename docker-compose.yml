@@ -33,14 +33,20 @@ x-app: &app
     # Used only when the value itself is not set (explicit EXCAT_* values always win):
     EXCAT_DATABASE_PASSWORD_FILE: ${EXCAT_DATABASE_PASSWORD_FILE-/var/lib/excat/db-secret/db_password}
     EXCAT_ENCRYPTION_KEY_FILE: /var/lib/excat/secrets/encryption_key
-    EXCAT_PUBLIC_URL: ${EXCAT_PUBLIC_URL:-https://localhost}
-    EXCAT_FQDN: ${EXCAT_FQDN-localhost}
+    # Public URL = https://<fqdn>[:https_port]; fqdn from .env or config/exposurecatalyst.yaml, default localhost.
+    # An EXCAT_PUBLIC_URL in .env stays accepted as an extra origin (e.g. the `direct` profile).
+    EXCAT_DEPLOYMENT: docker
+    EXCAT_CONFIG_FILE: /app/config/exposurecatalyst.yaml
+    EXCAT_FQDN: ${EXCAT_FQDN:-}
+    EXCAT_HTTPS_PORT: ${EXCAT_HTTPS_PORT:-}
+    TZ: ${TZ:-UTC}
     HTTP_PROXY: ${HTTP_PROXY:-}
     HTTPS_PROXY: ${HTTPS_PROXY:-}
     NO_PROXY: ${NO_PROXY:-localhost,127.0.0.1,postgres,redis,api,proxy,ollama}
   restart: unless-stopped
 
 x-app-volumes: &app-volumes
+  - ./config:/app/config:ro
   - secrets:/var/lib/excat/secrets:ro
   - db-secret:/var/lib/excat/db-secret:ro
   - certs:/var/lib/excat/certs
@@ -56,6 +62,7 @@ services:
     restart: "no"
     group_add: ["70"]           # may set group 70 (postgres) on the db-secret files only
     volumes:
+      - ./config:/app/config:ro
       - secrets:/var/lib/excat/secrets
       - db-secret:/var/lib/excat/db-secret
       - certs:/var/lib/excat/certs
@@ -107,6 +114,7 @@ services:
               "--forwarded-allow-ips", "${EXCAT_EDGE_SUBNET:-172.30.250.0/24}",
               "--workers", "${EXCAT_WEB_CONCURRENCY:-1}"]
     volumes:
+      - ./config:/app/config:ro
       - secrets:/var/lib/excat/secrets:ro
       - db-secret:/var/lib/excat/db-secret:ro
       - certs:/var/lib/excat/certs

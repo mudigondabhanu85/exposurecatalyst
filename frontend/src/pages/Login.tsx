@@ -11,7 +11,7 @@ export function safeNext(next: string | null): string {
   return next;
 }
 
-interface SsoStatus { saml_enabled: boolean; login_url: string; oidc_enabled: boolean; oidc_login_url: string; oidc_button_label: string }
+interface SsoStatus { saml_enabled: boolean; login_url: string; oidc_enabled: boolean; oidc_login_url: string; oidc_button_label: string; setup_required?: boolean }
 
 export default function LoginPage() {
   const [username, setUsername] = useState("");
@@ -54,6 +54,10 @@ export default function LoginPage() {
         {/* Full lockup incl. tagline; ≥160 px wide per brand minimum. The h1 is for screen readers. */}
         <img src="/brand/svg/logo-light.svg" alt="ExposureCatalyst" className="mx-auto mb-6 w-64 max-w-full" />
         <h1 id="login-title" className="sr-only">Sign in to ExposureCatalyst</h1>
+        {sso.data?.setup_required && (
+          <p role="status" className="mb-3 rounded bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            This installation has no users yet. <a className="font-semibold underline" href="/setup">Run first-run setup</a> with the token from the API logs.
+          </p>)}
         {ssoError && <p role="alert" className="mb-3 rounded bg-red-50 px-3 py-2 text-sm text-red-800">Single sign-on failed: {ssoError}</p>}
         {sso.data?.saml_enabled && (
           <a className="btn-primary mb-2 w-full justify-center" href={`${sso.data.login_url}?next=${next}`}>Sign in with Okta</a>)}

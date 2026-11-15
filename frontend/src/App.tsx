@@ -5,6 +5,8 @@ import { api } from "./api";
 import { useAuth } from "./auth";
 import { useHelp } from "./help";
 import LoginPage from "./pages/Login";
+import SetupPage from "./pages/Setup";
+import { DeploymentBanners } from "./components/Banners";
 import CveListPage from "./pages/CveList";
 import CveDetailPage from "./pages/CveDetail";
 import SettingsPage from "./pages/Settings";
@@ -99,6 +101,7 @@ function Shell() {
           </div>
         </div>
       </header>
+      {SETTINGS_PERMS.some(can) && <DeploymentBanners />}
       <main id="main" className="mx-auto max-w-7xl px-4 py-6">
         <Routes>
           <Route path="/" element={<Navigate to="/cves" replace />} />
@@ -124,6 +127,7 @@ export default function App() {
     return (
       <Routes>
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/setup" element={<SetupPage />} />
         <Route path="*" element={<Navigate to={`/login?next=${encodeURIComponent(loc.pathname + loc.search)}`} replace />} />
       </Routes>
     );

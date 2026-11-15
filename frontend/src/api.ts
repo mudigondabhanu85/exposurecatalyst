@@ -25,9 +25,9 @@ export function qs(query?: Query): string {
   return s ? `?${s}` : "";
 }
 
-export async function api<T>(path: string, opts: { method?: string; body?: unknown; query?: Query } = {}): Promise<T> {
+export async function api<T>(path: string, opts: { method?: string; body?: unknown; query?: Query; headers?: Record<string, string> } = {}): Promise<T> {
   const method = opts.method ?? "GET";
-  const headers: Record<string, string> = { Accept: "application/json" };
+  const headers: Record<string, string> = { Accept: "application/json", ...(opts.headers ?? {}) };
   if (opts.body !== undefined) headers["Content-Type"] = "application/json";
   if (method !== "GET") headers["X-CSRF-Token"] = csrfToken();
   const res = await fetch(path + qs(opts.query), {

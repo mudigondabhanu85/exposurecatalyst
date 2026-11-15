@@ -1,0 +1,60 @@
+# ExposureCatalyst configuration file (optional).
+#
+#   cp config/exposurecatalyst.example.yaml config/exposurecatalyst.yaml     (./run.sh does this for you)
+#
+# It is read when EXCAT_CONFIG_FILE points to it (docker compose and run.sh do), so a copy in a checkout never
+# changes local `make run` or the tests. config/exposurecatalyst.yaml is git-ignored and never baked into images. Every key is optional; a missing key
+# keeps its default. Precedence (highest first):
+#   non-empty environment variable (EXCAT_<KEY>, e.g. in .env)  >  EXCAT_<KEY>_FILE  >  this file  >  default
+# Nested keys use a double underscore in the environment: features.acme  ↔  EXCAT_FEATURES__ACME.
+# Put secrets (database password, encryption key, API keys) in .env / Docker secrets, never in this file.
+#
+# Who reads what:  [app] the API/scheduler (Settings)   [run.sh] passed to docker compose by ./run.sh
+#                  (with plain `docker compose up`, set the matching variable in .env instead).
+
+# --- Domain ------------------------------------------------------------------------------------------------
+# [app][run.sh] Hostname users browse to. When set, the public URL is https://<fqdn>[:https_port] and drives SAML
+# entity ID / ACS / SP metadata, the OIDC redirect URI, links in advisory emails, allowed Host headers, CSRF
+# origins, Open Graph URLs and the self-signed certificate's SAN. Unset outside Docker = previous behaviour
+# (EXCAT_PUBLIC_URL). The Docker deployment defaults to "localhost".
+# After changing it: ./run.sh (or restart). Admins then see "Domain changed — update Okta, DNS and the certificate".
+fqdn: localhost
+
+# [app][run.sh] External ports published by the proxy (Docker). https_port also goes into the public URL.
+http_port: 80
+https_port: 443
+
+# --- TLS ----------------------------------------------------------------------------------------------------
+# [app] self-signed (generated at first start) | uploaded (Settings → Certificates & Domain) | acme (Let's Encrypt;
+# requires features.acme and an internet-reachable fqdn).
+tls_mode: self-signed
+
+# [app] Strict-Transport-Security. Omit to keep the previous behaviour (sent when EXCAT_COOKIE_SECURE is true).
+# hsts: true
+# hsts_max_age_seconds: 63072000
+
+# --- Network ------------------------------------------------------------------------------------------------
+# [run.sh] Load balancers in front of the proxy whose X-Forwarded-* headers are trusted (CIDRs, space-separated).
+# trusted_proxies: "10.0.0.0/8"
+
+# [run.sh] Corporate outbound proxy for CVE sources, integrations and AI vendors (HTTPS_PROXY/HTTP_PROXY).
+# outbound_proxy: "http://proxy.corp.example:3128"
+
+# [run.sh] Container timezone for log timestamps (the application itself works in UTC).
+timezone: UTC
+
+# --- Database -----------------------------------------------------------------------------------------------
+# [app] External database instead of the bundled PostgreSQL. Put the password in .env (EXCAT_DATABASE_PASSWORD)
+# rather than in this URL. With run.sh, setting this also skips the bundled `postgres` service.
+# database_url: "postgresql+psycopg://excat@db.example.internal:5432/excat?sslmode=verify-full"
+
+# --- Logging ------------------------------------------------------------------------------------------------
+# [app] DEBUG | INFO | WARNING | ERROR
+log_level: INFO
+
+# --- Feature flags (all off by default; off = exactly the previous behaviour) --------------------------------
+features:
+  ui_tls_management: false   # Settings → Certificates & Domain: install / CSR / rollback / trusted CA bundle
+  acme: false                # ACME / Let's Encrypt (HTTP-01 or DNS-01) for internet-reachable deployments
+  subscriptions: false       # Integrations → Threat Intel & News Subscriptions (paid sources, manual intel)
+  run_watch_mode: false      # ./run.sh watch: poll for changes and apply them (dev/test only)

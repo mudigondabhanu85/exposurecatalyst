@@ -26,9 +26,11 @@ from exposurecatalyst.api import (
     integrations,
     news,
     scim,
+    setup,
     smtp,
     sources,
     sso,
+    system,
 )
 from exposurecatalyst.config import Settings, get_settings
 from exposurecatalyst.db.session import get_engine, get_session_factory, init_engine, session_scope
@@ -59,6 +61,13 @@ def bootstrap(settings: Settings) -> None:
         from exposurecatalyst.news.ingest import seed_feeds
 
         seed_feeds(db)
+    from exposurecatalyst import deployment
+
+    with get_session_factory()() as db:
+        deployment.record_domain(db, settings)
+        token = deployment.ensure_setup_token(db, settings)
+    if token:
+        deployment.print_setup_token(token, settings)
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -92,6 +101,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.add_middleware(OriginCheckMiddleware, settings=settings)
     app.add_middleware(SecurityHeadersMiddleware, settings=settings)
     app.add_middleware(RequestContextMiddleware)
+    if settings.allowed_hosts is not None:  # only when an FQDN is configured (unset = previous behaviour)
+        from starlette.middleware.trustedhost import TrustedHostMiddleware
+
+        app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
     if settings.cors_origin_list:
         app.add_middleware(CORSMiddleware, allow_origins=settings.cors_origin_list, allow_credentials=True,
                            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
@@ -99,7 +112,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     for r in (health.router, auth.router, cves.router, sources.router, help.router, admin.router,
               advisories.router, advisories.templates_router, smtp.router, integrations.router,
-              sso.router, scim.router, alerts.router, news.router, ai.router, database.router):
+              sso.router, scim.router, alerts.router, news.router, ai.router, database.router,
+              system.router, setup.router):
         app.include_router(r)
 
     @app.exception_handler(scim.ScimError)

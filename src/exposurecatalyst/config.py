@@ -3,6 +3,10 @@
 Every setting is read from an ``EXCAT_``-prefixed environment variable (or ``.env``). Any setting can
 instead be read from a file named by ``EXCAT_<NAME>_FILE`` (Docker secrets / the bootstrap's secrets
 volume); an explicitly set, non-empty ``EXCAT_<NAME>`` always wins over the file.
+
+Optionally, a YAML file named by ``EXCAT_CONFIG_FILE`` (Docker: ``config/exposurecatalyst.yaml``) supplies values
+too. Precedence:
+non-empty environment variable > ``.env`` > ``*_FILE`` > YAML > default. Without a YAML file nothing changes.
 Field descriptions are the source for ``docs/reference/configuration.md`` — keep them accurate.
 """
 
@@ -14,7 +18,7 @@ from pathlib import Path
 from typing import Any, Literal
 from urllib.parse import urlsplit
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import BaseModel, Field, SecretStr, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, PydanticBaseSettingsSource, SettingsConfigDict
 
@@ -54,9 +58,70 @@ class FileSecretsSource(PydanticBaseSettingsSource):
         return out
 
 
+def config_file_path() -> Path | None:
+    """The YAML config file named by EXCAT_CONFIG_FILE (docker compose and run.sh set it). Opt-in on purpose:
+    a config file sitting in a checkout must not silently change local runs or the test suite."""
+    explicit = os.environ.get("EXCAT_CONFIG_FILE", "").strip()
+    return Path(explicit) if explicit else None
+
+
+def load_config_file(path: Path | None = None) -> dict[str, Any]:
+    """Parse the YAML config file (safe_load). Missing file → {}. Keys are setting names without EXCAT_."""
+    path = path or config_file_path()
+    if path is None or not path.is_file():
+        return {}
+    import yaml
+
+    data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    if not isinstance(data, dict):
+        raise ValueError(f"{path}: top level must be a mapping")
+    return {str(k).lower(): v for k, v in data.items() if v is not None}
+
+
+class YamlConfigSource(PydanticBaseSettingsSource):
+    """Values from the YAML config file, used only where neither the environment nor .env sets a non-empty
+    value (compose passes unset variables as empty strings). Nested ``features`` keys are merged per key."""
+
+    def __init__(self, settings_cls: type[BaseSettings], dotenv: dict[str, Any]):
+        super().__init__(settings_cls)
+        self._dotenv = {k.lower(): v for k, v in dotenv.items()}
+
+    def get_field_value(self, field: FieldInfo, field_name: str) -> tuple[Any, str, bool]:  # pragma: no cover
+        return None, field_name, False
+
+    def _explicit(self, env_name: str) -> bool:
+        return bool(os.environ.get(env_name) or self._dotenv.get(env_name.lower())
+                    or self._dotenv.get(env_name.lower().removeprefix("excat_")))
+
+    def __call__(self) -> dict[str, Any]:
+        data = load_config_file()
+        out: dict[str, Any] = {}
+        for name, value in data.items():
+            if name not in self.settings_cls.model_fields:
+                continue  # compose/run.sh-level keys (ports, outbound proxy, …) are read by run.sh
+            env = f"EXCAT_{name.upper()}"
+            if isinstance(value, dict):
+                value = {k: v for k, v in value.items() if not self._explicit(f"{env}__{str(k).upper()}")}
+                if value:
+                    out[name] = value
+            elif not self._explicit(env):
+                out[name] = value
+        return out
+
+
+class Features(BaseModel):
+    """Feature flags for the 1.4 enhancements. All default off; off = exactly the previous behaviour."""
+
+    ui_tls_management: bool = Field(False, description="Settings → Certificates & Domain: install/CSR/rollback.")
+    acme: bool = Field(False, description="Allow ACME / Let's Encrypt certificates (internet-reachable hosts).")
+    subscriptions: bool = Field(False, description="Threat Intel & News Subscriptions (paid sources, manual intel).")
+    run_watch_mode: bool = Field(False, description="`./run.sh watch`: poll for changes and apply them (dev/test).")
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_prefix="EXCAT_", env_file=".env", env_file_encoding="utf-8", extra="ignore"
+        env_prefix="EXCAT_", env_file=".env", env_file_encoding="utf-8", extra="ignore",
+        env_nested_delimiter="__",  # EXCAT_FEATURES__UI_TLS_MANAGEMENT=true
     )
 
     # --- General -----------------------------------------------------------------------------
@@ -76,6 +141,34 @@ class Settings(BaseSettings):
     cors_origins: str = Field(
         "", description="Comma-separated extra origins allowed for CORS and state-changing requests."
     )
+
+    # --- Domain / deployment (1.4) -------------------------------------------------------------
+    fqdn: str | None = Field(
+        None, description="Public hostname (e.g. `exposurecatalyst.company.com`). When set, the public URL becomes "
+        "`https://<fqdn>[:https_port]` and drives SAML/OIDC URLs, email links, allowed hosts and CSRF origins. "
+        "Unset = previous behaviour (EXCAT_PUBLIC_URL). The Docker deployment defaults it to `localhost`.")
+    https_port: int | None = Field(None, ge=1, le=65535, description="External HTTPS port (default 443).")
+    http_port: int | None = Field(None, ge=1, le=65535, description="External HTTP port that redirects to HTTPS "
+                                  "(Docker; default 80).")
+    tls_mode: Literal["self-signed", "uploaded", "acme"] = Field(
+        "self-signed", description="Docker proxy certificate source (see Settings → Certificates & Domain).")
+    hsts: bool | None = Field(None, description="Send Strict-Transport-Security. Unset = previous behaviour "
+                              "(sent when EXCAT_COOKIE_SECURE is true).")
+    hsts_max_age_seconds: int = Field(63_072_000, ge=0, description="HSTS max-age (default two years).")
+    trusted_proxies: str = Field("", description="Load balancers in front of the Docker proxy whose X-Forwarded-* "
+                                 "headers are trusted (CIDRs; read by run.sh/compose).")
+    outbound_proxy: str = Field("", description="Corporate HTTP(S) proxy for outbound calls (exported as "
+                                "HTTPS_PROXY/HTTP_PROXY by run.sh).")
+    timezone: str = Field("UTC", description="Container timezone for logs (TZ). The app stores and computes in UTC.")
+    deployment: Literal["standalone", "docker"] = Field(
+        "standalone", description="Set to `docker` by docker-compose; enables Docker-only defaults (fqdn=localhost).")
+    certs_dir: Path = Field(Path("/var/lib/excat/certs"), description="Docker certs volume (proxy certificate, "
+                            "trusted CA bundle). Absent outside Docker.")
+    setup_token_hours: int = Field(24, ge=1, le=168, description="Validity of the first-run setup token.")
+    config_file: str | None = Field(None, description="Path to the YAML config file. Read only when set "
+                                    "(docker compose / run.sh point it at config/exposurecatalyst.yaml).")
+    features: Features = Field(default_factory=Features, description="Feature flags (`features.<name>` in YAML, "
+                               "`EXCAT_FEATURES__<NAME>` in the environment).")
 
     # --- Database ----------------------------------------------------------------------------
     database_url: SecretStr = Field(
@@ -227,7 +320,9 @@ class Settings(BaseSettings):
                                    file_secret_settings):
         dotenv = dotenv_settings() if callable(dotenv_settings) else {}
         files = FileSecretsSource(settings_cls, dotenv)
-        return init_settings, files, env_settings, dotenv_settings, file_secret_settings  # files: only fills gaps
+        yaml_cfg = YamlConfigSource(settings_cls, dotenv)
+        # files and YAML sit first but only fill gaps (no non-empty env/.env value), so explicit values win
+        return init_settings, files, yaml_cfg, env_settings, dotenv_settings, file_secret_settings
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -235,8 +330,12 @@ class Settings(BaseSettings):
 
     @property
     def allowed_origins(self) -> set[str]:
-        parts = urlsplit(self.public_url)
-        return {f"{parts.scheme}://{parts.netloc}", *self.cors_origin_list}
+        origins = {self.public_url, *([self.explicit_public_url] if self.explicit_public_url else [])}
+        out = set()
+        for o in origins:
+            parts = urlsplit(o)
+            out.add(f"{parts.scheme}://{parts.netloc}")
+        return out | set(self.cors_origin_list)
 
     @property
     def egress_allowlist_list(self) -> list[str]:
@@ -257,6 +356,59 @@ class Settings(BaseSettings):
     @property
     def is_sqlite(self) -> bool:
         return self.database_url.get_secret_value().startswith("sqlite")
+
+    @field_validator("fqdn", "https_port", "http_port", "hsts", mode="before")
+    @classmethod
+    def _empty_is_unset(cls, v: Any) -> Any:
+        return None if isinstance(v, str) and not v.strip() else v
+
+    @field_validator("fqdn")
+    @classmethod
+    def _valid_fqdn(cls, v: str | None) -> str | None:
+        if v is None:
+            return None
+        import re
+
+        v = v.strip().lower().rstrip(".")
+        if "://" in v or "/" in v or ":" in v:
+            raise ValueError("fqdn is a bare hostname (no scheme, port or path), e.g. exposurecatalyst.company.com")
+        if not re.fullmatch(r"(?=.{1,253}$)([a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*", v):
+            raise ValueError(f"fqdn '{v}' is not a valid hostname")
+        return v
+
+    @model_validator(mode="after")
+    def _derive_public_url(self) -> Settings:
+        """FQDN drives the public URL. Unset (outside Docker) → EXCAT_PUBLIC_URL exactly as before."""
+        self._explicit_public_url = None
+        if self.fqdn is None and self.deployment == "docker":
+            self.fqdn = "localhost"
+        if self.fqdn is not None:
+            port = self.https_port or 443
+            derived = f"https://{self.fqdn}" + ("" if port == 443 else f":{port}")
+            if "public_url" in self.model_fields_set and self.public_url.rstrip("/") != derived:
+                self._explicit_public_url = self.public_url.rstrip("/")  # kept as an extra trusted origin
+            self.public_url = derived
+        return self
+
+    @property
+    def explicit_public_url(self) -> str | None:
+        """EXCAT_PUBLIC_URL when the FQDN overrides it (e.g. the `direct` profile on http://localhost:8000)."""
+        return getattr(self, "_explicit_public_url", None)
+
+    @property
+    def allowed_hosts(self) -> list[str] | None:
+        """Host-header allowlist when an FQDN is set (None = no restriction, the previous behaviour)."""
+        if self.fqdn is None:
+            return None
+        hosts = {self.fqdn, "localhost", "127.0.0.1", "::1", "api"}
+        if self.explicit_public_url:
+            hosts.add(urlsplit(self.explicit_public_url).hostname or "")
+        hosts |= {urlsplit(o).hostname or "" for o in self.cors_origin_list}
+        return sorted(h for h in hosts if h)
+
+    @property
+    def hsts_enabled(self) -> bool:
+        return self.cookie_secure if self.hsts is None else self.hsts
 
     @model_validator(mode="after")
     def _merge_db_password(self) -> Settings:

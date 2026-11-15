@@ -39,7 +39,8 @@ ORIGIN_EXEMPT = ("/api/auth/saml/acs", "/scim/")
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     def __init__(self, app: ASGIApp, settings: Settings):
         super().__init__(app)
-        self.hsts = settings.cookie_secure
+        self.hsts = settings.hsts_enabled
+        self.hsts_value = f"max-age={settings.hsts_max_age_seconds}; includeSubDomains"
         # Only ask browsers to upgrade sub-resources when the app is actually served over HTTPS;
         # on plain-HTTP local runs it would break loading of the SPA's own assets.
         self.app_csp = APP_CSP + ("; upgrade-insecure-requests" if settings.public_url.startswith("https://") else "")
@@ -59,7 +60,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         if path.startswith("/api"):
             response.headers["Cache-Control"] = "no-store"
         if self.hsts:
-            response.headers["Strict-Transport-Security"] = "max-age=63072000; includeSubDomains"
+            response.headers["Strict-Transport-Security"] = self.hsts_value
         return response
 
 

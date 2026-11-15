@@ -102,7 +102,17 @@ def ensure_redis_password(p: Paths) -> str:
 # ---- self-signed certificate --------------------------------------------------------------------------------
 
 def configured_fqdn() -> str:
-    return (os.environ.get("EXCAT_FQDN") or "localhost").strip().lower().rstrip(".") or "localhost"
+    """Same precedence as Settings: non-empty EXCAT_FQDN, else `fqdn` in the YAML config, else localhost."""
+    value = os.environ.get("EXCAT_FQDN", "").strip()
+    if not value:
+        try:
+            from exposurecatalyst.config import load_config_file
+
+            value = str(load_config_file().get("fqdn") or "").strip()
+        except Exception as exc:  # noqa: BLE001 - a broken config must not block bootstrap; say so
+            say(f"warning: could not read the config file ({type(exc).__name__}); using localhost")
+            value = ""
+    return value.lower().rstrip(".") or "localhost"
 
 
 def _sans(fqdn: str):

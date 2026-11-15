@@ -15,6 +15,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from exposurecatalyst import deployment
 from exposurecatalyst.api.auth import _set_cookies
 from exposurecatalyst.api.deps import Principal, client_ip, require, settings_dep
 from exposurecatalyst.config import Settings
@@ -48,7 +49,9 @@ def sso_status(db: Session = Depends(get_db)) -> dict:
     cfg, ocfg = saml.load_config(db), oidc.load_config(db)
     return {"saml_enabled": bool(cfg["enabled"]), "login_url": saml.LOGIN_PATH,
             "oidc_enabled": bool(ocfg["enabled"]), "oidc_login_url": oidc.LOGIN_PATH,
-            "oidc_button_label": ocfg["button_label"]}
+            "oidc_button_label": ocfg["button_label"],
+            # additive (1.4): lets the login page offer the first-run wizard on an empty installation
+            "setup_required": deployment.setup_required(db)}
 
 
 @router.get(saml.METADATA_PATH)

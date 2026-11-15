@@ -8,7 +8,7 @@ export COMPOSE_PROJECT_NAME="${SMOKE_PROJECT:-excat-smoke}"
 export EXCAT_HTTP_PORT="${SMOKE_HTTP_PORT:-18080}" EXCAT_HTTPS_PORT="${SMOKE_HTTPS_PORT:-18443}"
 export EXCAT_EDGE_SUBNET="${SMOKE_SUBNET:-172.30.251.0/24}" EXCAT_PROXY_IP="${SMOKE_PROXY_IP:-172.30.251.10}"
 export EXCAT_BIND_ADDRESS=127.0.0.1 EXCAT_HTTPS_PORT_SUFFIX=":${EXCAT_HTTPS_PORT}"
-export EXCAT_PUBLIC_URL="https://localhost:${EXCAT_HTTPS_PORT}" EXCAT_FQDN=localhost
+export EXCAT_FQDN=localhost   # public URL is derived: https://localhost:${EXCAT_HTTPS_PORT}
 TIMEOUT="${SMOKE_TIMEOUT:-300}"
 log() { printf '%s [smoke] %s\n' "$(date -u +%FT%TZ)" "$*"; }
 cleanup() { log "tearing down"; docker compose down -v --remove-orphans >/dev/null 2>&1 || true; }
@@ -35,5 +35,11 @@ curl -sk "$base/api/health/ready" | grep -q '"database":"up"' || { log "FAIL dat
 log "ok   database up"
 if docker compose logs init | grep -q "self-signed certificate generated"; then
   log "ok   bootstrap generated secrets + certificate"
+fi
+if curl -sk "$base/api/auth/sso" | grep -q '"setup_required":true'; then   # fresh volumes → first-run wizard
+  token=$(docker compose logs api 2>/dev/null | grep -A3 "one-time setup token" | sed -n 's/^.*|[[:space:]]*\([A-Za-z0-9_-]\{20,\}\)[[:space:]]*$/\1/p' | head -1)
+  [[ -n "$token" ]] || { log "FAIL setup token not found in api logs"; exit 1; }
+  check "setup token (no token)" 401 "$base/api/setup/verify"
+  check "setup token from api logs" 200 "$base/api/setup/verify" -H "Authorization: Bearer $token"
 fi
 log "PASS"
