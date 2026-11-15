@@ -327,6 +327,7 @@ function AdvisoryEditor() {
                   </tr>))}
                 </tbody></table></div>)}
           </Section>
+          <TicketsAndSharing id={id} />
           <History id={id} />
         </div>
 
@@ -336,6 +337,50 @@ function AdvisoryEditor() {
         </Section>
       </div>
     </>
+  );
+}
+
+interface ActionTarget { id: number; name: string; kind: string; label: string; capability: "create_ticket" | "notify" }
+interface ActionRecord { id: number; integration: string; kind: string; label: string; status: string; ref: string | null; url: string | null; error: string | null; created_at: string; created_by: string | null }
+
+function TicketsAndSharing({ id }: { id: string }) {
+  const { can } = useAuth();
+  const qc = useQueryClient();
+  const q = useQuery({ queryKey: ["advisory-actions", id], queryFn: () => api<{ allowed: boolean; status: string; available: ActionTarget[]; history: ActionRecord[] }>(`/api/advisories/${id}/actions`) });
+  const run = useMutation({
+    mutationFn: (integration_id: number) => api<ActionRecord>(`/api/advisories/${id}/actions`, { method: "POST", body: { integration_id } }),
+    onSettled: () => { qc.invalidateQueries({ queryKey: ["advisory-actions", id] }); qc.invalidateQueries({ queryKey: ["advisory-history", id] }); },
+  });
+  const d = q.data;
+  if (!d || (d.available.length === 0 && d.history.length === 0)) return null;
+  return (
+    <Section title="Tickets & sharing" tip="Create a ticket in Jira or ServiceNow, or post to Slack / Teams, from an approved advisory. Configure targets in Settings → Integrations.">
+      <ErrorNote error={q.error ?? run.error} />
+      {d.available.length > 0 && (
+        d.allowed && can("advisory:send") ? (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {d.available.map((t) => (
+              <button key={t.id} className="btn-secondary" disabled={run.isPending} onClick={() => run.mutate(t.id)}>
+                {t.capability === "create_ticket" ? "Create ticket" : "Post"} · {t.name}
+              </button>
+            ))}
+          </div>
+        ) : (
+          <p className="mb-3 text-sm text-ec-slate">{d.allowed ? "You need the advisory:send permission to create tickets or post." : "Available once the advisory is approved."}</p>
+        )
+      )}
+      {d.history.length > 0 && (
+        <ul className="space-y-1 text-xs">{d.history.map((h) => (
+          <li key={h.id}>
+            <span className="text-ec-slate">{fmtDateTime(h.created_at)}</span> · <strong>{h.integration}</strong> ·{" "}
+            {h.status === "ok"
+              ? (h.url ? <a className="link" href={h.url} target="_blank" rel="noopener noreferrer">{h.ref} ↗</a> : <span>{h.ref === "posted" ? "posted" : h.ref}</span>)
+              : <span className="text-red-800">failed: {h.error}</span>}
+            {h.created_by && <span className="text-ec-slate"> · {h.created_by}</span>}
+          </li>))}
+        </ul>
+      )}
+    </Section>
   );
 }
 
