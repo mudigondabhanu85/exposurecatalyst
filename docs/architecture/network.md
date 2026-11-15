@@ -36,3 +36,8 @@
    checks (defence in depth). New feeds, integrations, AI providers or SMTP relays must be added to **both**.
 
 The allowlist is the Terraform variable `egress_domains`, which feeds both the firewall and the app setting.
+
+Mail is the exception to domain matching. SMTP submission (587/STARTTLS) has no TLS SNI when the connection
+opens, so the firewall can only pass it to explicit destination CIDRs (`smtp_egress_cidrs`). The recommended
+path in AWS is the **SES API** over HTTPS (`ses_identity_arns`), which is allowlisted by name and
+authenticated by the task role.

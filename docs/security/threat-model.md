@@ -68,6 +68,8 @@ controls.
 |---|---|---|---|---|
 | I | Advisory sent to the wrong people | Approval workflow. Confirmation dialog listing every recipient. Distribution lists. Audit | 2/2 | Low |
 | T | Email header injection | CR/LF stripping. Validated addresses. BCC only in the envelope | 1/2 | Low |
+| S/E | Stolen mail credential used to send as the organisation | M365: app-only OAuth2 limited to one mailbox (`SMTP.SendAsApp` + `FullAccess` on that mailbox only), secret encrypted and rotatable. SES: IAM task role scoped to listed identities, no stored keys. Audit of every send/test | 2/3 | Low |
+| I | Mail settings used for SSRF (token endpoint, relay host) | Entra token request pinned to `login.microsoftonline.com`/`.us`; tenant ID pattern-validated; relay host DNS/private/metadata checks and port allowlist; SES region format-validated (SDK endpoint) | 1/2 | Low |
 | I | Asset identifiers leaked to AI vendors | Off by default. Provider allowlist. Redaction (hostnames, IPs, owners, emails, cloud IDs). Bedrock option. No prompt storage | 2/3 | Low–Medium (depends on policy) |
 | T/E | Prompt injection from CVE/news/tool text | Fenced untrusted data, hardened system prompt, no tools, schema-validated and grounded outputs, human approval for advisories | 2/2 | Low |
 | I | Exfiltration via AI-rendered images or links | No raw HTML or images rendered. CSP `img-src 'self' data:`. Links open with `noopener` | 1/2 | Low |

@@ -3,6 +3,30 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.3.0] — 2026-11-14 — Microsoft 365 OAuth2 and Amazon SES email
+
+### Added
+- **Microsoft 365 OAuth2** delivery: SMTP AUTH `XOAUTH2` with an app-only Entra ID token (client
+  credentials, `https://outlook.office365.com/.default`). Commercial/GCC and GCC High/DoD clouds. Tokens are
+  cached until shortly before expiry. The client secret is encrypted, write-only and rotatable. STARTTLS or
+  SSL/TLS is required.
+- **Amazon SES API** delivery: SESv2 `SendEmail` with the raw MIME message (logo and Excel attachment
+  intact), batches of 50 recipients, optional configuration set. Credentials come from the AWS default
+  chain (the ECS task role), so no keys are stored.
+- Settings → SMTP: delivery-method selector and presets (Microsoft 365, Microsoft 365 GCC High, Amazon SES
+  API, Amazon SES SMTP, corporate relay). **Send test** reports the message ID.
+- Terraform: `ses_identity_arns` grants the API and scheduler task roles `ses:SendEmail`/`SendRawEmail` on
+  those identities and allowlists `email.<region>.amazonaws.com`. `smtp_egress_cidrs` passes TCP 587 to
+  explicit relay CIDRs. `login.microsoftonline.com` was added to the default egress list.
+- SMTP admin guide: Entra ID app registration and Exchange Online PowerShell steps, SES identity and
+  sandbox steps, egress guidance. New threat-model rows for mail credentials and mail-settings SSRF.
+
+### Fixed
+- The container image now installs the `aws` extra (boto3). Before this, the Amazon Bedrock AI provider
+  could not run in the image, and the SES API needs boto3 too.
+- Reference deployment: SMTP on 587 could not pass the Network Firewall. STARTTLS has no TLS SNI, so the
+  domain allowlist dropped it. Use `smtp_egress_cidrs` or the SES API.
+
 ## [1.2.0] — 2026-11-14 — Additional connectors, tickets & sharing
 
 ### Added

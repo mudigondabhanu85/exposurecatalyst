@@ -37,7 +37,8 @@ Delivery is phased. Each phase ships its own in-app help, documentation and diag
    tours, DOCX and standalone HTML exports.
 
 All six phases were delivered in 1.0.0. 1.1.0 adds OpenID Connect sign-in as the alternative to SAML and the
-Database settings page. 1.2.0 adds the spec's additional connectors (22 more) and advisory tickets & sharing.
+Database settings page. 1.2.0 adds the spec's additional connectors (22 more) and advisory tickets & sharing. 1.3.0 adds Microsoft 365
+OAuth2 and the Amazon SES API as email delivery methods.
 
 ## Where to start
 
