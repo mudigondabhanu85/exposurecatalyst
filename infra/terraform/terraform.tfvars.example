@@ -3,3 +3,9 @@ hosted_zone_id = "Z0123456789ABCDEFGHIJ"
 image_tag      = "1.0.0"
 alarm_email    = "secops@example.com"
 enable_bedrock = false
+
+# Mail: Amazon SES API with the task role (recommended in AWS) …
+# ses_identity_arns = ["arn:aws:ses:us-east-1:123456789012:identity/example.com"]
+# … or an SMTP relay / Microsoft 365 on 587 (destination CIDRs)
+# smtp_egress_cidrs = ["203.0.113.0/24"] # replace: your relay, or the smtp.office365.com ranges from
+#                                        # https://endpoints.office.com (Exchange Online, port 587)

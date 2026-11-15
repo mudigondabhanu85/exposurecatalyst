@@ -50,7 +50,28 @@ variable "egress_domains" {
     ".qualys.com", ".app.wiz.io", "auth.app.wiz.io", ".cloud.tanium.com", ".service-now.com",
     ".zafran.io", ".armorcode.com",
     ".okta.com", "hooks.slack.com", ".webhook.office.com", ".logic.azure.com",
+    "login.microsoftonline.com", # Entra ID tokens: Microsoft 365 SMTP OAuth2, Defender
   ]
+}
+
+variable "ses_identity_arns" {
+  description = <<-EOT
+    Verified Amazon SES identities (domain or address ARNs) the app may send as. Non-empty grants the API and
+    scheduler task roles ses:SendEmail / ses:SendRawEmail on them (Settings → SMTP → Amazon SES API) and
+    allows the SES API endpoint through the Network Firewall.
+  EOT
+  type        = list(string)
+  default     = []
+}
+
+variable "smtp_egress_cidrs" {
+  description = <<-EOT
+    Destination CIDRs allowed on TCP 587 through the Network Firewall (SMTP relay / Microsoft 365). STARTTLS
+    carries no TLS SNI when the connection opens, so the domain allowlist cannot match it: list your relay or
+    Exchange Online's published SMTP ranges. Empty = SMTP egress blocked (use the SES API instead).
+  EOT
+  type        = list(string)
+  default     = []
 }
 
 variable "alarm_email" {

@@ -60,8 +60,12 @@ SSO in the app.
   The master password is rotated by RDS and is only read by the migration task at launch.
 - `sslmode=require` encrypts the database connection. For `verify-full`, add the RDS CA bundle to the image and
   set `sslrootcert`.
-- Add new outbound hosts (news feeds, integrations, AI providers, SMTP relay) to `egress_domains` **and** to
-  `EXCAT_EGRESS_ALLOWLIST` (derived automatically from the same variable).
+- Add new outbound hosts (news feeds, integrations, AI providers) to `egress_domains`.
+  `EXCAT_EGRESS_ALLOWLIST` is derived automatically from the same variable.
+- **Email**: set `ses_identity_arns` to send with the Amazon SES API using the task roles (no stored keys). This
+  grants `ses:SendEmail`/`SendRawEmail` on those identities and allowlists `email.<region>.amazonaws.com`.
+  An SMTP relay or Microsoft 365 on port 587 needs `smtp_egress_cidrs`: STARTTLS has no TLS SNI when the
+  connection opens, so the domain allowlist can't match it.
 
 ## Not included (yet)
 

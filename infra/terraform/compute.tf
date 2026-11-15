@@ -124,9 +124,24 @@ resource "aws_iam_role_policy" "api_bedrock" {
   })
 }
 
+resource "aws_iam_role_policy" "ses_send" {
+  for_each = length(var.ses_identity_arns) > 0 ? { api = aws_iam_role.api.id, scheduler = aws_iam_role.scheduler.id } : {}
+  name     = "ses-send"
+  role     = each.value
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow", Action = ["ses:SendEmail", "ses:SendRawEmail"]
+      Resource = concat(var.ses_identity_arns, [
+        "arn:${data.aws_partition.current.partition}:ses:${var.region}:${data.aws_caller_identity.current.account_id}:configuration-set/*"
+      ])
+    }]
+  })
+}
+
 # ---- task definitions -------------------------------------------------------------------------------
 locals {
-  allowlist = join(",", [for d in var.egress_domains : startswith(d, ".") ? "*${d}" : d])
+  allowlist = join(",", [for d in local.egress_domains : startswith(d, ".") ? "*${d}" : d])
   environment = [
     { name = "EXCAT_ENV", value = "prod" },
     { name = "EXCAT_PUBLIC_URL", value = local.public_url },

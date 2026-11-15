@@ -16,7 +16,7 @@ ENV PATH=/opt/venv/bin:$PATH
 WORKDIR /src
 COPY pyproject.toml README.md ./
 COPY src ./src
-RUN pip install .
+RUN pip install ".[aws]"   # boto3: Amazon SES API mail and Amazon Bedrock (IAM task role)
 
 # ---- 3. Documentation site + DOCX / standalone HTML exports ---------------------------------------
 # Diagrams and Mermaid renders are committed (CI re-renders them); Pandoc comes from its official image.
