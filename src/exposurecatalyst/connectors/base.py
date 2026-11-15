@@ -13,7 +13,7 @@ import time
 from abc import ABC, abstractmethod
 from collections.abc import Callable, Iterator
 from dataclasses import asdict, dataclass
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any, ClassVar
 from urllib.parse import urlsplit
 
@@ -82,6 +82,14 @@ class ConnectorSpec:
     docs: str
     rate: tuple[int, float] = (60, 60.0)  # requests per seconds
     capabilities: tuple[str, ...] = ("assets_for_cve",)
+    category: str = "Vulnerability & exposure"  # catalog grouping in the UI
+    regions: tuple[tuple[str, str], ...] = ()  # (label, base URL) choices offered in the setup form
+    # "documented": request/response shapes follow the vendor's public API reference.
+    # "confirm": endpoint/filter defaults follow the vendor's usual pattern but its reference is not public —
+    # confirm them against your tenant's API docs (they are all editable settings).
+    api_status: str = "documented"
+    auth_hosts: tuple[str, ...] = ()  # token endpoints on another host (allowed for egress, not as base URL)
+    fixed_base_url: str | None = None  # connectors without a per-tenant URL (Slack, Teams): form hides the field
 
     def public(self) -> dict[str, Any]:
         d = asdict(self)
@@ -117,6 +125,16 @@ def _to_date(v: Any) -> date | None:
         return v.date()
     if isinstance(v, date):
         return v
+    if isinstance(v, (int, float)) or (isinstance(v, str) and v.strip().isdigit()):
+        n = float(v)
+        if n <= 0:
+            return None
+        if n > 1e11:  # epoch milliseconds
+            n /= 1000
+        try:
+            return datetime.fromtimestamp(n, tz=UTC).date()
+        except (OverflowError, OSError, ValueError):
+            return None
     s = str(v).strip()
     try:
         return datetime.fromisoformat(s.replace("Z", "+00:00")).date()
@@ -166,7 +184,7 @@ class Connector(ABC):
             rate=rate,
             per=per,
             transport=transport,
-            allowlist=[*self.spec.host_patterns, *settings.egress_allowlist_list],
+            allowlist=[*self.spec.host_patterns, *self.spec.auth_hosts, *settings.egress_allowlist_list],
             timeout=settings.connector_timeout_seconds,
             **({"sleep": sleep} if sleep else {}),
             headers={"Accept": "application/json"},
@@ -210,6 +228,8 @@ def validate_base_url(kind: str, url: str, settings: Settings) -> str:
     host = (urlsplit(url).hostname or "").lower()
     allow = [*spec.host_patterns, *settings.egress_allowlist_list]
     if not host_matches(host, allow):
+        if not spec.host_patterns:
+            raise UnsafeURLError(f"{spec.vendor} is self-hosted: add '{host}' to EXCAT_EGRESS_ALLOWLIST to allow it")
         raise UnsafeURLError(
             f"host '{host}' is not a known {spec.vendor} domain "
             f"({', '.join(spec.host_patterns)}); add it to EXCAT_EGRESS_ALLOWLIST for on-prem/custom hosts"
@@ -221,6 +241,47 @@ def validate_base_url(kind: str, url: str, settings: Settings) -> str:
     if parts.query or parts.fragment:
         raise UnsafeURLError("base URL must not contain a query string or fragment")
     return url.rstrip("/")
+
+
+def first(v: Any) -> Any:
+    """First element of a list (vendors often return single values as one-item lists)."""
+    if isinstance(v, list):
+        return next((x for x in v if x not in (None, "")), None)
+    return v
+
+
+def flatten_keys(record: dict[str, Any]) -> dict[str, Any]:
+    """Vendor records with dotted *key names* ('specific_data.data.hostname') → nested dicts, so dotted
+    field-map paths resolve. Keys without dots are kept as-is."""
+    nested: dict[str, Any] = {}
+    for k, v in record.items():
+        cur = nested
+        *parents, leaf = str(k).split(".")
+        for part in parents:
+            nxt = cur.setdefault(part, {})
+            if not isinstance(nxt, dict):
+                nxt = cur[part] = {"_value": nxt}
+            cur = nxt
+        cur[leaf] = v
+    return nested
+
+
+def json_body(resp: httpx.Response, vendor: str) -> Any:
+    try:
+        return resp.json()
+    except ValueError as exc:
+        raise ConnectorError(f"{vendor} returned a non-JSON response") from exc
+
+
+class ActionConnector(Connector):
+    """Outbound connector (ticketing / chat) — it does not answer CVE asset questions."""
+
+    def iter_findings(self, cve_id: str) -> Iterator[dict[str, Any]]:
+        raise UnsupportedError(f"{self.spec.vendor} is an action connector and is not queried for assets")
+
+    @abstractmethod
+    def deliver(self, item: dict[str, Any]) -> dict[str, Any]:
+        """Create a ticket / post a message for an advisory. Returns {"ref": str, "url": str | None}."""
 
 
 class TokenCache:

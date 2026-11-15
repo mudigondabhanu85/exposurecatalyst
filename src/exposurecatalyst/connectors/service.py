@@ -156,10 +156,16 @@ def _enricher(db: Session, settings: Settings) -> tuple[Connector | None, Integr
     return None, None
 
 
+def asset_sources(db: Session) -> list[Integration]:
+    """Enabled integrations that answer "which assets does this CVE affect?" (not ticketing/chat)."""
+    rows = db.scalars(select(Integration).where(Integration.enabled.is_(True)).order_by(Integration.id))
+    return [i for i in rows if i.kind in REGISTRY and "assets_for_cve" in REGISTRY[i.kind].spec.capabilities]
+
+
 def check_all(
     db: Session, cve_id: str, settings: Settings, *, force: bool = False
 ) -> list[tuple[Integration, IntegrationCveCheck]]:
-    integrations = list(db.scalars(select(Integration).where(Integration.enabled.is_(True)).order_by(Integration.id)))
+    integrations = asset_sources(db)
     enricher, enricher_row = _enricher(db, settings)
     try:
         results = [
@@ -184,7 +190,7 @@ def check_all(
 
 
 def panel(db: Session, cve_id: str) -> dict[str, Any]:
-    integrations = list(db.scalars(select(Integration).where(Integration.enabled.is_(True)).order_by(Integration.id)))
+    integrations = asset_sources(db)
     checks = {
         c.integration_id: c for c in db.scalars(select(IntegrationCveCheck).where(IntegrationCveCheck.cve_id == cve_id))
     }
@@ -235,8 +241,8 @@ def panel(db: Session, cve_id: str) -> dict[str, Any]:
         "assets": unique[:500],
         "message": ""
         if integrations
-        else "No integrations configured. An admin can add Qualys, Tanium, Wiz, "
-        "Zafran, ArmorCode or ServiceNow CMDB under Settings → Integrations.",
+        else "No asset-source integrations configured. An admin can add vulnerability, exposure and "
+        "cloud security tools under Settings → Integrations.",
     }
 
 

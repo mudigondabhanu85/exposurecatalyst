@@ -59,6 +59,7 @@ class WizConnector(Connector):
         ),
         docs="integrations/wiz/",
         rate=(3, 1.0),
+        category="Cloud security (CNAPP)",
     )
 
     def __init__(self, *a, **kw):

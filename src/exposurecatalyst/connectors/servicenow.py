@@ -36,7 +36,7 @@ class ServiceNowCmdbConnector(Connector):
     spec = ConnectorSpec(
         kind="servicenow_cmdb",
         label="ServiceNow CMDB",
-        vendor="ServiceNow",
+        vendor="ServiceNow CMDB",
         description="CMDB configuration items affected by a CVE (via Vulnerability Response) and owner / "
         "business unit / environment enrichment for assets from every other source.",
         host_patterns=("*.service-now.com", "*.servicenowservices.com"),
@@ -72,6 +72,7 @@ class ServiceNowCmdbConnector(Connector):
         docs="integrations/servicenow-cmdb/",
         rate=(20, 1.0),
         capabilities=("assets_for_cve", "asset_details"),
+        category="Asset inventory (CAASM)",
     )
 
     def _table(self, table: str, params: dict[str, Any]) -> tuple[list[dict[str, Any]], int | None]:
