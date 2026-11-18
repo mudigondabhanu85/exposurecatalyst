@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.7
 # Base images are pinned by version AND digest (update both together; `make scan` re-checks them).
-ARG EXCAT_VERSION=1.3.0
+ARG EXCAT_VERSION=1.4.0
 # Registry for Docker Hub images: a pull-through mirror or corporate registry (digests keep builds identical).
 ARG DOCKERHUB=docker.io
 # ---- 1. Frontend -------------------------------------------------------------------------------

@@ -3,6 +3,49 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [1.4.0] — 2026-11-17 — Docker deployment, Certificates & Domain, run.sh, subscriptions
+
+All additions; existing features, APIs, data and the `make run` / AWS deployments are unchanged. New behaviour
+is behind flags that default to off: `features.ui_tls_management`, `features.acme`, `features.subscriptions`,
+`features.run_watch_mode`.
+
+### Added
+- **One-command Docker deployment** (`docker compose up -d` → `https://<fqdn>`): Caddy proxy (only published
+  service, TLS 1.2/1.3, HTTP→HTTPS, hot reload over an admin unix socket), one-shot `init` (secrets +
+  self-signed certificate, never overwrites) and `migrate` services, health-gated start order, internal backend
+  network, non-root read-only containers with all capabilities dropped, digest-pinned images, resource limits,
+  log rotation; profiles `direct`, `scale` (worker + Redis), `backup`, `ollama`, `devmail`; external-database
+  override; corporate proxy and registry-mirror support; `make smoke`, `make scan` (Trivy), `make bundle`
+  (air-gapped). CI: Trivy image scan and a compose smoke job.
+- `EXCAT_<NAME>_FILE` for any setting; optional YAML config (`config/exposurecatalyst.yaml`, opt-in via
+  `EXCAT_CONFIG_FILE`); `fqdn` driving every derived URL (SAML, OIDC, email links, Host allowlist, CSRF
+  origins, certificate SAN) with domain-change detection and admin banners; configurable HSTS.
+- **First-run setup wizard**: one-time setup token in the API logs → break-glass Super Admin with mandatory TOTP.
+- **Settings → Certificates & Domain**: certificate status, derived URLs, install (PEM / bundle / PKCS#12 /
+  paste) with full validation, CSR generation with server-side keys, automatic restore on failed activation,
+  one-click rollback, trusted CA bundle for outbound TLS, ACME (HTTP-01 / DNS-01), expiry emails 30/14/7/1.
+- **run.sh / run.ps1**: preflight, lock, change detection, selective rebuild, backup before migrations,
+  health-gated apply with automatic image rollback; start, stop, restart, update, status, logs, backup,
+  restore, watch, doctor.
+- **Threat Intel & News Subscriptions**: 17 vendor presets plus custom REST / RSS / TAXII 2.1 / manual sources,
+  JSONPath field mapping with Test & preview, manual intel with TLP and attachments, CSV / JSON / STIX import,
+  licence metadata with usage, quotas and renewal reminders, redistribution controls enforced in advisory emails
+  and AI context; new permission `intel:manage`.
+- Migrations 0008 (TLS certificates, CSRs) and 0009 (subscriptions, intel items, attachments): new tables only,
+  tested downgrades.
+- Docs: Docker quick start, deployment configuration, Map your domain, TLS certificates, corporate proxy & CA,
+  run.sh, backup/restore, upgrades, migrating into Docker, air-gapped install, subscriptions, troubleshooting,
+  container topology diagram; in-app help for Certificates & Domain and Subscriptions.
+
+### Changed
+- Base images moved to current patch releases (the previous Python base had fixable HIGH/CRITICAL OS CVEs).
+- The plain-HTTP `127.0.0.1:8000` port of the compose stack moved to `--profile direct`.
+
+### Security
+- Secret files and certificate keys are permission-restricted; private keys are Fernet-encrypted in the
+  database and never returned; outbound trust bundle applied only while one is uploaded; subscription URLs are
+  host-pinned and SSRF-checked including token and pagination URLs; TLP:RED never leaves the platform.
+
 ## [1.3.0] — 2026-11-14 — Microsoft 365 OAuth2 and Amazon SES email
 
 ### Added

@@ -57,7 +57,7 @@ services:
   # ---- one-shot bootstrap: secrets + self-signed certificate (never overwrites) ---------------------------------
   init:
     <<: *app
-    build: {context: ., target: runtime, args: {EXCAT_VERSION: "${EXCAT_VERSION:-1.3.0}", DOCKERHUB: "${EXCAT_DOCKERHUB_MIRROR:-docker.io}"}}
+    build: {context: ., target: runtime, args: {EXCAT_VERSION: "${EXCAT_VERSION:-1.4.0}", DOCKERHUB: "${EXCAT_DOCKERHUB_MIRROR:-docker.io}"}}
     command: ["exposurecatalyst", "bootstrap"]
     restart: "no"
     group_add: ["70"]           # may set group 70 (postgres) on the db-secret files only
@@ -109,7 +109,7 @@ services:
 
   api:
     <<: *app
-    build: {context: ., target: runtime, args: {EXCAT_VERSION: "${EXCAT_VERSION:-1.3.0}", DOCKERHUB: "${EXCAT_DOCKERHUB_MIRROR:-docker.io}"}}
+    build: {context: ., target: runtime, args: {EXCAT_VERSION: "${EXCAT_VERSION:-1.4.0}", DOCKERHUB: "${EXCAT_DOCKERHUB_MIRROR:-docker.io}"}}
     command: ["exposurecatalyst", "serve", "--host", "0.0.0.0", "--port", "8000",
               "--forwarded-allow-ips", "${EXCAT_EDGE_SUBNET:-172.30.250.0/24}",
               "--workers", "${EXCAT_WEB_CONCURRENCY:-1}"]
@@ -154,7 +154,7 @@ services:
   # ---- reverse proxy: the ONLY service with published ports ---------------------------------------------------------
   proxy:
     <<: *hardening
-    build: {context: ., target: proxy, args: {EXCAT_VERSION: "${EXCAT_VERSION:-1.3.0}", DOCKERHUB: "${EXCAT_DOCKERHUB_MIRROR:-docker.io}"}}
+    build: {context: ., target: proxy, args: {EXCAT_VERSION: "${EXCAT_VERSION:-1.4.0}", DOCKERHUB: "${EXCAT_DOCKERHUB_MIRROR:-docker.io}"}}
     image: exposurecatalyst-proxy:${EXCAT_IMAGE_TAG:-local}
     ports:
       - "${EXCAT_BIND_ADDRESS:-0.0.0.0}:${EXCAT_HTTP_PORT:-80}:8080"

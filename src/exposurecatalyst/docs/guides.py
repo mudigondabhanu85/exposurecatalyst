@@ -33,7 +33,7 @@ USER_HELP = ("help/help-center.md", "help/cve-intelligence.md", "help/cve-detail
 ADMIN_HELP = ("help/advisory-templates.md", "help/settings-smtp.md", "help/settings-integrations.md",
               "help/settings-sso.md", "help/settings-alerts.md", "help/settings-news.md", "help/settings-ai.md",
               "help/settings-sources.md", "help/settings-rbac.md", "help/settings-database.md",
-              "help/settings-certificates.md")
+              "help/settings-certificates.md", "help/settings-subscriptions.md")
 
 GUIDES: tuple[Guide, ...] = (
     Guide("user", "User Guide", "CVE Intelligence, advisories, news and the assistant — for analysts, approvers "

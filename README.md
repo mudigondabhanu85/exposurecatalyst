@@ -4,21 +4,37 @@
 sources, correlates them with affected assets from your security and CTEM tools, and generates reviewable
 stakeholder advisory emails.
 
-> **Status: 1.3.0** — all six phases delivered: CVE Intelligence (NVD + CISA KEV + FIRST EPSS), Advisory Email
+> **Status: 1.4.0** — all six phases delivered: CVE Intelligence (NVD + CISA KEV + FIRST EPSS), Advisory Email
 > Generator with approval workflow, 28 integrations (24 asset sources from Qualys to Mend, plus Jira, ServiceNow ITSM, Slack and Teams), Okta
 > SAML or OIDC SSO + SailPoint SCIM, alerts, Security News, a multi-provider AI layer with redaction, guided tours,
-> Terraform AWS reference deployment, and DOCX / standalone HTML documentation.
+> Terraform AWS reference deployment, and DOCX / standalone HTML documentation. 1.4 adds one-command Docker
+> deployment with HTTPS, Certificates & Domain management, `run.sh`, and paid threat-intel subscriptions.
 > See `CHANGELOG.md`.
 
-## Quick start (Docker)
+## Run with Docker
+
+```bash
+git clone <your repository URL> exposurecatalyst && cd exposurecatalyst
+./run.sh                                   # or: docker compose up -d        (Windows: .\run.ps1)
+./run.sh logs api | grep -A3 "setup token" # one-time token (24 h)
+open https://localhost/setup               # create the Super Admin (TOTP required), then sign in
+```
+
+Secrets and a self-signed certificate are generated on first start; only the proxy publishes ports (80/443).
+Set your domain in `config/exposurecatalyst.yaml` (`fqdn`), install a certificate under Settings → Certificates &
+Domain, and see `docs/getting-started/docker-quickstart.md`, `docs/operations/run-sh.md` and
+`docs/reference/deployment-config.md`. Optional features are behind flags (`features.*`, all off by default).
+
+## Quick start (Docker, explicit .env)
 
 ```bash
 cp .env.example .env
 # set POSTGRES_PASSWORD and EXCAT_ENCRYPTION_KEY in .env; generate the key with:
 python3 -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
-docker compose up -d --build                                  # postgres, api (runs migrations), scheduler
+docker compose up -d --build                                  # init, postgres, migrate, api, scheduler, proxy
 docker compose exec api exposurecatalyst create-admin --username breakglass --email you@example.com
-open http://localhost:8000                                    # app      (docs at /docs, API at /api/docs)
+open https://localhost                                       # app (docs at /docs, API at /api/docs)
+# the previous plain-HTTP endpoint: docker compose --profile direct up -d → http://localhost:8000
 ```
 
 `create-admin` prints a TOTP secret/URI once — add it to an authenticator app; it is required at login.

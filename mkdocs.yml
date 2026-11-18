@@ -67,6 +67,9 @@ nav:
   - Home: index.md
   - Getting started:
       - Installation & deployment: getting-started/installation.md
+      - Quick start with Docker: getting-started/docker-quickstart.md
+      - Migrating into Docker: getting-started/migrate-to-docker.md
+      - Air-gapped install: getting-started/air-gapped.md
   - User guide:
       - CVE Intelligence: user-guide/cve-intelligence.md
       - Advisories (analysts & approvers): user-guide/advisories.md
@@ -80,11 +83,15 @@ nav:
       - SailPoint provisioning & mapping: admin-guide/sailpoint.md
       - Alerts & scheduling: admin-guide/alerts.md
       - AI providers & data protection: admin-guide/ai.md
+      - Map your domain: admin-guide/map-your-domain.md
+      - TLS certificates: admin-guide/tls-certificates.md
+      - Corporate proxy & custom CA: admin-guide/proxy-and-ca.md
   - Architecture:
       - High-level AWS architecture: architecture/high-level.md
       - Network: architecture/network.md
       - Data-flow diagrams: architecture/data-flow.md
       - Components: architecture/components.md
+      - Container topology (Docker): architecture/containers.md
       - Identity flow: architecture/identity-flow.md
       - Sequence diagrams: architecture/sequences.md
       - Diagram standards & pipeline: architecture/diagram-standards.md
@@ -98,6 +105,7 @@ nav:
           - ADR-0005 Content Security Policy scoping: architecture/adr/0005-csp-scoping.md
   - Integrations:
       - integrations/index.md
+      - Threat Intel & News Subscriptions: integrations/subscriptions.md
       - "CrowdStrike Falcon Spotlight": integrations/crowdstrike.md
       - "Microsoft Defender Vulnerability Management": integrations/defender.md
       - "Qualys VMDR": integrations/qualys.md
@@ -133,12 +141,17 @@ nav:
       - Data retention: security/data-retention.md
   - Reference:
       - Configuration: reference/configuration.md
+      - Deployment configuration (Docker, YAML, flags): reference/deployment-config.md
       - Roles × permissions: reference/rbac-matrix.md
       - API: reference/api.md
   - Operations:
       - Runbooks: operations/runbooks.md
       - Monitoring & metrics: operations/monitoring.md
       - Disaster recovery: operations/disaster-recovery.md
+      - run.sh reference: operations/run-sh.md
+      - Backup & restore (Docker): operations/backup-restore.md
+      - Upgrades (Docker): operations/upgrades.md
+      - Troubleshooting (Docker): operations/troubleshooting-docker.md
   - In-app help:
       - help/help-center.md
       - help/cve-intelligence.md
@@ -158,6 +171,7 @@ nav:
       - help/settings-rbac.md
       - help/settings-database.md
       - help/settings-certificates.md
+      - help/settings-subscriptions.md
       - help/glossary.md
       - help/faq.md
       - help/shortcuts.md
