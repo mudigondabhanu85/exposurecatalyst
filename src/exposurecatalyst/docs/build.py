@@ -101,7 +101,9 @@ def render_diagrams(use_docker: bool) -> None:
             raise SystemExit("Graphviz `dot` not found and Docker unavailable — cannot render diagrams.")
         _run(["docker", "build", "-q", "-t", "exposurecatalyst-diagrams", "-f",
               str(PROJECT_ROOT / "docker" / "diagrams.Dockerfile"), str(DOCS / "assets" / "fonts")])
-        _run(["docker", "run", "--rm", "-v", f"{DOCS}:/docs", "-v", f"{PROJECT_ROOT / 'brand'}:/brand:ro",
+        # run as the invoking user so the renders are writable on Linux hosts / CI runners (as for Mermaid)
+        user = ["-u", f"{os.getuid()}:{os.getgid()}", "-e", "HOME=/tmp"] if hasattr(os, "getuid") else []
+        _run(["docker", "run", "--rm", *user, "-v", f"{DOCS}:/docs", "-v", f"{PROJECT_ROOT / 'brand'}:/brand:ro",
               "-e", "EXCAT_BRAND_DIR=/brand", "-w", "/docs/diagrams",
               "exposurecatalyst-diagrams", "python", "_render_all.py", "/docs/assets/diagrams"])
     else:

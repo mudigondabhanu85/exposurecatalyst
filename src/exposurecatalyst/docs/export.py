@@ -304,6 +304,10 @@ def convert_page(rel: str, ctx: Context) -> str:
 
 
 def combined_markdown(guide: Guide, fmt: str, nav: list[tuple[str, str]] | None = None) -> str:
+    if not (DOCS / "assets" / "brand").is_dir():  # generated (git-ignored): needed in a clean checkout / CI
+        from exposurecatalyst.docs.build import sync_brand
+
+        sync_brand()
     pages = guide_pages(guide, nav)
     ctx = Context(fmt, {p: page_id(p) for p in pages})
     return "\n\n".join(convert_page(p, ctx) for p in pages)
