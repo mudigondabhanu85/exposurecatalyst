@@ -11,6 +11,13 @@ stakeholder advisory emails.
 > deployment with HTTPS, Certificates & Domain management, `run.sh`, and paid threat-intel subscriptions.
 > See `CHANGELOG.md`.
 
+## Documentation
+
+Browse the Markdown sources in [`docs/`](docs/), or download the **Word and HTML guides** (User, Administrator,
+Security & Architecture, Complete) and the full documentation website from the
+[latest release](https://github.com/mudigondabhanu85/exposurecatalyst/releases/latest). In the app:
+Help Center → Download documentation (filtered by role).
+
 ## Run with Docker
 
 ```bash
