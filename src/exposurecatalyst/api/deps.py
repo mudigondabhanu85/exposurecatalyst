@@ -59,6 +59,8 @@ def require(*perms: Permission) -> Callable[..., Principal]:
     def checker(
         principal: Principal = Depends(current_principal), settings: Settings = Depends(settings_dep)
     ) -> Principal:
+        if principal.user.must_change_password:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Password change required")
         missing = [p for p in perms if p not in principal.permissions]
         if missing:
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"Missing permission: {', '.join(missing)}")
@@ -75,6 +77,8 @@ def require_any(*perms: Permission) -> Callable[..., Principal]:
     """Dependency factory: the caller must hold *at least one* of the listed permissions."""
 
     def checker(principal: Principal = Depends(current_principal)) -> Principal:
+        if principal.user.must_change_password:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Password change required")
         if not any(p in principal.permissions for p in perms):
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"Requires one of: {', '.join(perms)}")
         return principal

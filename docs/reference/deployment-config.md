@@ -34,6 +34,8 @@ scheduler skips the work). In the environment, flags are `EXCAT_FEATURES__<NAME>
 |---|---|---|
 | `EXCAT_ENCRYPTION_KEY`, `POSTGRES_PASSWORD` | generated | Leave empty for generation by `init`; existing values are kept |
 | `EXCAT_<NAME>_FILE` | — | Read any setting from a file (Docker secrets); explicit values win |
+| `EXCAT_BOOTSTRAP_ADMIN` | true | Empty installation: create the default `breakglass` Super Admin with a generated password (forced change + MFA). `false` = setup-token wizard |
+| `EXCAT_BOOTSTRAP_ADMIN_USERNAME` | breakglass | Its username |
 | `EXCAT_FQDN`, `EXCAT_HTTP_PORT`, `EXCAT_HTTPS_PORT` | — | Same as the YAML keys |
 | `EXCAT_HTTPS_PORT_SUFFIX` | `:<port>` when not 443 (run.sh) | Port kept in HTTP→HTTPS redirects |
 | `EXCAT_BIND_ADDRESS` | 0.0.0.0 | Host interface for 80/443 |
@@ -55,4 +57,4 @@ scheduler skips the work). In the environment, flags are `EXCAT_FEATURES__<NAME>
 
 New application settings in 1.4 (all optional): `fqdn`, `http_port`, `https_port`, `tls_mode`, `hsts`,
 `hsts_max_age_seconds`, `trusted_proxies`, `outbound_proxy`, `timezone`, `deployment`, `config_file`,
-`certs_dir`, `setup_token_hours`, `features`.
+`certs_dir`, `setup_token_hours`, `bootstrap_admin`, `bootstrap_admin_username`, `secrets_dir`, `features`.

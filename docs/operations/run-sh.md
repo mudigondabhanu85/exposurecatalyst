@@ -16,6 +16,7 @@ Docker deployment safely. They are additions: `docker compose up -d` and `make r
 | `restore <file>` | Takes a safety backup, then restores after you type `RESTORE` (non-interactive: `EXCAT_CONFIRM_RESTORE=RESTORE`) |
 | `watch` | Every `EXCAT_WATCH_INTERVAL` s (30) apply changes; requires `features.run_watch_mode: true` — dev/test only |
 | `doctor` | Health, certificate expiry, FQDN DNS resolution, disk, versions |
+| `initial-password` | Print the generated password of the default `breakglass` account (shown only on request; invalid once changed) |
 | `help` | Usage |
 
 **Preflight**: Docker and Compose ≥ 2.24, ports free or held by our proxy, ≥ `EXCAT_MIN_FREE_GB` (5) free,

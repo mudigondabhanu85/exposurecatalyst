@@ -67,6 +67,7 @@ def bootstrap(settings: Settings) -> None:
 
     with get_session_factory()() as db:
         deployment.record_domain(db, settings)
+        deployment.ensure_bootstrap_admin(db, settings)
         token = deployment.ensure_setup_token(db, settings)
     if token:
         deployment.print_setup_token(token, settings)

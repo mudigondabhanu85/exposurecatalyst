@@ -36,7 +36,18 @@ log "ok   database up"
 if docker compose logs init | grep -q "self-signed certificate generated"; then
   log "ok   bootstrap generated secrets + certificate"
 fi
-if curl -sk "$base/api/auth/sso" | grep -q '"setup_required":true'; then   # fresh volumes → first-run wizard
+# default break-glass account: generated password, forced change before anything else
+pw=$(docker compose exec -T api cat /var/lib/excat/secrets/initial_admin_password 2>/dev/null || true)
+if [[ -n "$pw" ]]; then
+  jar=$(mktemp)
+  check "break-glass login" 200 "$base/api/auth/login" -c "$jar" -H "Origin: $base" -H 'Content-Type: application/json' \
+    -d "{\"username\":\"breakglass\",\"password\":\"$pw\"}"
+  curl -sk -b "$jar" "$base/api/auth/me" | grep -q '"must_change_password":true' || { log "FAIL must_change_password not set"; exit 1; }
+  log "ok   password change forced at first sign-in"
+  check "admin API blocked until password change" 403 "$base/api/admin/users" -b "$jar"
+  rm -f "$jar"
+fi
+if curl -sk "$base/api/auth/sso" | grep -q '"setup_required":true'; then   # EXCAT_BOOTSTRAP_ADMIN=false → wizard
   token=$(docker compose logs api 2>/dev/null | grep -A3 "one-time setup token" | sed -n 's/^.*|[[:space:]]*\([A-Za-z0-9_-]\{20,\}\)[[:space:]]*$/\1/p' | head -1)
   [[ -n "$token" ]] || { log "FAIL setup token not found in api logs"; exit 1; }
   check "setup token (no token)" 401 "$base/api/setup/verify"

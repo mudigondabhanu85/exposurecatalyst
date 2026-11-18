@@ -20,7 +20,11 @@ is behind flags that default to off: `features.ui_tls_management`, `features.acm
 - `EXCAT_<NAME>_FILE` for any setting; optional YAML config (`config/exposurecatalyst.yaml`, opt-in via
   `EXCAT_CONFIG_FILE`); `fqdn` driving every derived URL (SAML, OIDC, email links, Host allowlist, CSRF
   origins, certificate SAN) with domain-change detection and admin banners; configurable HSTS.
-- **First-run setup wizard**: one-time setup token in the API logs → break-glass Super Admin with mandatory TOTP.
+- **Default break-glass account** on an empty installation: `breakglass` Super Admin with a per-install generated
+  password (`./run.sh initial-password`; never logged); a new password and MFA enrolment are forced at first
+  sign-in (every other route answers 403 until then). Migration 0010 adds `users.must_change_password`
+  (additive). `EXCAT_BOOTSTRAP_ADMIN=false` uses the **first-run setup wizard** instead (one-time setup token in
+  the API logs → break-glass Super Admin with mandatory TOTP).
 - **Settings → Certificates & Domain**: certificate status, derived URLs, install (PEM / bundle / PKCS#12 /
   paste) with full validation, CSR generation with server-side keys, automatic restore on failed activation,
   one-click rollback, trusted CA bundle for outbound TLS, ACME (HTTP-01 / DNS-01), expiry emails 30/14/7/1.

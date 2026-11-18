@@ -283,7 +283,9 @@ function Deploy {
   if (Dc-Quiet up -d --remove-orphans --wait --wait-timeout $script:HealthTimeout) {
     $v = Get-AppVersion; Save-State $v; Ok "ExposureCatalyst $v is up: $($script:Url)"
     if ($script:Fqdn -eq "localhost") { Log "  (self-signed certificate until you install one - Settings > Certificates & Domain)" }
-    if ((& docker compose logs api 2>$null | Out-String) -match "one-time setup token") { Log "  first run: open $($script:Url)/setup - token: .\run.ps1 logs api" }
+    $apiLogs = (& docker compose logs api 2>$null | Out-String)
+    if ($apiLogs -match "bootstrap_admin_created") { Log "  first run: sign in at $($script:Url) as 'breakglass' - password: .\run.ps1 initial-password (new password + MFA required)" }
+    elseif ($apiLogs -match "one-time setup token") { Log "  first run: open $($script:Url)/setup - token: .\run.ps1 logs api" }
     return
   }
   Show-Failure; Restore-Images; Release-Lock; exit 1
@@ -358,6 +360,7 @@ Usage: .\run.ps1 [command]
   restore <file>  restore a backup (asks for confirmation; takes a safety backup first)
   watch           poll for changes and apply them - needs features.run_watch_mode: true (dev/test only)
   doctor          diagnostics: health, DNS, disk, versions
+  initial-password  print the generated password of the default 'breakglass' account
   help            this help
 
 Configuration: config\exposurecatalyst.yaml (created from the example on first run) and .env.
@@ -378,6 +381,9 @@ try {
     "restore" { Cmd-Restore ($Rest | Select-Object -First 1) }
     "watch" { Cmd-Watch }
     "doctor" { Cmd-Doctor }
+    "initial-password" { Require-Docker; Adopt-DotEnv; $pw = & docker compose exec -T api cat /var/lib/excat/secrets/initial_admin_password 2>$null
+                         if ($LASTEXITCODE -ne 0) { Die 1 "no generated break-glass password (api not running, EXCAT_BOOTSTRAP_ADMIN=false, or not a Docker install)" }
+                         Write-Output "username: breakglass"; Write-Output "password: $pw" }
     { $_ -in @("help", "-h", "--help") } { Usage }
     default { Usage; exit 2 }
   }

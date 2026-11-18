@@ -16,8 +16,8 @@ stakeholder advisory emails.
 ```bash
 git clone <your repository URL> exposurecatalyst && cd exposurecatalyst
 ./run.sh                                   # or: docker compose up -d        (Windows: .\run.ps1)
-./run.sh logs api | grep -A3 "setup token" # one-time token (24 h)
-open https://localhost/setup               # create the Super Admin (TOTP required), then sign in
+./run.sh initial-password                  # generated password of the default 'breakglass' Super Admin
+open https://localhost                     # sign in → set a new password + enrol MFA (forced), then create accounts
 ```
 
 Secrets and a self-signed certificate are generated on first start; only the proxy publishes ports (80/443).

@@ -6,6 +6,7 @@ import { useAuth } from "./auth";
 import { useHelp } from "./help";
 import LoginPage from "./pages/Login";
 import SetupPage from "./pages/Setup";
+import FirstLoginPage from "./pages/FirstLogin";
 import { DeploymentBanners } from "./components/Banners";
 import CveListPage from "./pages/CveList";
 import CveDetailPage from "./pages/CveDetail";
@@ -133,5 +134,9 @@ export default function App() {
     );
   }
   if (loc.pathname === "/login") return <Navigate to="/cves" replace />;
+  // Default break-glass account: new password (and MFA for local admins) before anything else.
+  if (me.must_change_password || me.first_login_pending) {
+    return <FirstLoginPage />;
+  }
   return <Shell />;
 }

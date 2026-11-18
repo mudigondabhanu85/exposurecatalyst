@@ -346,7 +346,10 @@ deploy() {
     save_state "$version"
     ok "ExposureCatalyst $version is up: $URL"
     if [ "$FQDN" = "localhost" ]; then log "  (self-signed certificate until you install one — Settings → Certificates & Domain)"; fi
-    if dc logs api 2>/dev/null | grep "one-time setup token" >/dev/null; then
+    if dc logs api 2>/dev/null | grep "bootstrap_admin_created" >/dev/null; then
+      log "  first run: sign in at $URL as 'breakglass' — password: ./run.sh initial-password"
+      log "  (you must set a new password and enrol MFA at first sign-in)"
+    elif dc logs api 2>/dev/null | grep "one-time setup token" >/dev/null; then
       log "  first run: open $URL/setup — token: ./run.sh logs api | grep -A3 'setup token'"
     fi
     return 0
@@ -432,6 +435,15 @@ cmd_watch() {
   done
 }
 
+cmd_initial_password() {  # prints a secret on explicit request only (never in logs/run.log)
+  adopt_dotenv
+  local pw
+  pw=$(dc exec -T api cat /var/lib/excat/secrets/initial_admin_password 2>/dev/null) \
+    || die 1 "no generated break-glass password (api not running, EXCAT_BOOTSTRAP_ADMIN=false, or not a Docker install)"
+  printf 'username: %s\npassword: %s\n' "${EXCAT_BOOTSTRAP_ADMIN_USERNAME:-breakglass}" "$pw"
+  printf '(valid until changed at first sign-in; afterwards this file is obsolete)\n' >&2
+}
+
 cmd_doctor() {
   ensure_config
   load_config
@@ -477,6 +489,7 @@ Usage: ./run.sh [command]
   watch           poll for changes every EXCAT_WATCH_INTERVAL s (30) and apply them — needs
                   features.run_watch_mode: true (dev/test only)
   doctor          diagnostics: health, certificate, DNS, disk, versions
+  initial-password  print the generated password of the default 'breakglass' account (first sign-in)
   help            this help
 
 Configuration: config/exposurecatalyst.yaml (created from the example on first run) and .env.
@@ -504,6 +517,7 @@ main() {
     restore) cmd_restore "$@" ;;
     watch) cmd_watch ;;
     doctor) cmd_doctor ;;
+    initial-password) cmd_initial_password ;;
     help|-h|--help) usage ;;
     *) usage >&2; exit 2 ;;
   esac

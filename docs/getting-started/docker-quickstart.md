@@ -24,17 +24,22 @@ On first start the one-shot `init` container generates every secret (encryption 
 passwords) into protected volumes and a **self-signed certificate** for the configured domain, then `migrate`
 creates the schema and the API, scheduler and proxy start in order, each gated on the previous one's health.
 
-## 2. Create the first administrator
+## 2. Sign in with the break-glass account
 
-The API prints a one-time **setup token** (valid 24 h, single use):
+On an empty installation a default **break-glass Super Admin** is created for you. Its password is generated
+per installation (there is no default password anywhere) and stored in the protected `secrets` volume:
 
 ```bash
-./run.sh logs api | grep -A3 "setup token"      # or: docker compose logs api
+./run.sh initial-password          # Windows: .\run.ps1 initial-password
 ```
 
-Open **https://localhost/setup** (your browser warns about the self-signed certificate until you install a
-real one), enter the token, create the break-glass **Super Admin** and enrol an authenticator app (TOTP is
-mandatory). The wizard disappears once a user exists; there are no default passwords anywhere.
+Open **https://localhost** (your browser warns about the self-signed certificate until you install a real
+one) and sign in as `breakglass`. You must **set a new password** and **enrol an authenticator app** before
+anything else is available. Then create named accounts (Settings → Users & RBAC) or configure SSO, and keep
+`breakglass` for emergencies. The generated password stops working once changed.
+
+Prefer the one-time setup wizard instead? Set `EXCAT_BOOTSTRAP_ADMIN=false` in `.env` before the first start:
+the API then prints a setup token (`./run.sh logs api | grep -A3 "setup token"`) for **https://localhost/setup**.
 
 ## 3. Sign in and configure
 

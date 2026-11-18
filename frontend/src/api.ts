@@ -50,7 +50,7 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
 export interface Me {
   id: number; username: string; display_name: string | null; email: string | null;
   roles: string[]; permissions: string[]; mfa_enabled: boolean; mfa_verified: boolean;
-  tour_completed: boolean; csrf_token: string;
+  tour_completed: boolean; csrf_token: string; must_change_password?: boolean; first_login_pending?: boolean;
 }
 export interface CveSummary {
   cve_id: string; title: string | null; severity: string; cvss_score: number | null; cvss_version: string | null;

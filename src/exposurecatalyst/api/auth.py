@@ -47,6 +47,8 @@ class MeOut(BaseModel):
     mfa_verified: bool
     tour_completed: bool
     csrf_token: str
+    must_change_password: bool = False
+    first_login_pending: bool = False  # default break-glass account: new password and/or MFA enrolment pending
 
 
 def _me(p: Principal) -> MeOut:
@@ -54,7 +56,16 @@ def _me(p: Principal) -> MeOut:
     return MeOut(id=u.id, username=u.username, display_name=u.display_name, email=u.email,
                  roles=sorted(r.name for r in u.roles), permissions=sorted(p.permissions),
                  mfa_enabled=u.totp_enabled, mfa_verified=p.session.mfa_verified,
-                 tour_completed=u.tour_completed, csrf_token=p.session.csrf_token)
+                 tour_completed=u.tour_completed, csrf_token=p.session.csrf_token,
+                 must_change_password=bool(u.must_change_password), first_login_pending=_first_login(u))
+
+
+def _first_login(u: User) -> bool:
+    from exposurecatalyst.config import get_settings
+
+    s = get_settings()
+    bootstrap = s.bootstrap_admin and u.username == s.bootstrap_admin_username and u.is_local
+    return bool(u.must_change_password) or (bootstrap and s.require_mfa_for_local_admins and not u.totp_enabled)
 
 
 def _verify_totp(user: User, code: str) -> bool:
@@ -198,7 +209,10 @@ def change_password(body: PasswordChangeIn, request: Request, response: Response
     problems = password_problems(body.new_password, username=user.username, min_length=settings.password_min_length)
     if problems:
         raise HTTPException(422, "Password " + "; ".join(problems))
+    if verify_password(body.new_password, user.password_hash):
+        raise HTTPException(422, "Choose a password different from the current one")
     user.password_hash = hash_password(body.new_password)
+    user.must_change_password = False
     revoke_user_sessions(db, user.id)  # sign out everywhere, then issue a fresh session
     token, sess = create_session(db, user, settings, ip=client_ip(request),
                                  user_agent=request.headers.get("user-agent"), mfa_verified=p.session.mfa_verified)

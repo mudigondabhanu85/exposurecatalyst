@@ -8,6 +8,8 @@ Start with `./run.sh doctor` and `./run.sh logs <service>`.
 | Browser warns about the certificate | Self-signed certificate (first start): install one — [TLS certificates](../admin-guide/tls-certificates.md) |
 | `400 Invalid host header` | The browser uses a name other than `fqdn`: fix DNS / bookmark, or set `fqdn` |
 | `403` on every POST after changing the domain | Stale tab on the old URL: reload from `https://<fqdn>` |
+| Forgot the break-glass password after changing it | Another Super Admin resets it (Users & RBAC), or `docker compose exec api exposurecatalyst create-admin --username recovery` |
+| `./run.sh initial-password` says no password | Existing installation, `EXCAT_BOOTSTRAP_ADMIN=false`, or the API container isn't running |
 | No setup token in the logs | Users already exist (the wizard is only for empty installations), or the token expired: `docker compose restart api` prints a fresh one |
 | `toomanyrequests` while building | Docker Hub rate limit: `docker login`, or set `EXCAT_DOCKERHUB_MIRROR` |
 | `exec /usr/bin/caddy: operation not permitted` | A custom proxy image with file capabilities: use the provided `proxy` build target |

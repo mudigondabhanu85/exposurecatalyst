@@ -171,6 +171,42 @@ def setup_required(db: Session) -> bool:
     return (db.scalar(select(func.count()).select_from(User)) or 0) == 0
 
 
+def ensure_bootstrap_admin(db: Session, settings: Settings) -> str | None:
+    """Docker first start: create the default break-glass Super Admin from the generated password file (empty
+    installation only). The password must be changed and MFA enrolled at first sign-in. Returns the username."""
+    if not settings.bootstrap_admin or not setup_required(db):
+        return None
+    f = Path(settings.secrets_dir) / "initial_admin_password"
+    try:
+        password = f.read_text(encoding="utf-8").strip()
+    except OSError:
+        return None  # not a Docker deployment (or opted out): setup-token wizard as before
+    if len(password) < 16:
+        return None
+    from exposurecatalyst.models import Role
+    from exposurecatalyst.security.passwords import hash_password
+    from exposurecatalyst.security.rbac import seed_roles
+
+    seed_roles(db)
+    role = db.scalar(select(Role).where(Role.name == "Super Admin"))
+    user = User(username=settings.bootstrap_admin_username, display_name="Break-glass administrator",
+                password_hash=hash_password(password), is_local=True, roles=[role], must_change_password=True)
+    db.add(user)
+    try:
+        db.flush()
+        audit.record(db, "user.created", actor_username="bootstrap", target_type="user", target_id=user.id,
+                     details={"username": user.username, "roles": ["Super Admin"], "via": "bootstrap",
+                              "must_change_password": True})  # nosec B105 - a flag name, not a password
+        db.commit()
+    except IntegrityError:  # another API worker created it first
+        db.rollback()
+        return None
+    log.warning("bootstrap_admin_created", username=user.username,
+                hint="read the one-time password with ./run.sh initial-password; "
+                     "change it and enrol MFA at first sign-in")
+    return user.username
+
+
 def ensure_setup_token(db: Session, settings: Settings) -> str | None:
     """On an empty installation, make sure a valid token exists and return it (to be printed to the logs).
     Stored Fernet-encrypted so every API process can print the same token; deleted once used."""

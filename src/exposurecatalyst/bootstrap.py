@@ -90,6 +90,20 @@ def ensure_db_password(p: Paths) -> str:
     return "database password: generated"
 
 
+def ensure_initial_admin_password(p: Paths) -> str | None:
+    """Random password for the default break-glass account (consumed by the API only on an empty installation;
+    changed at first sign-in). Never printed: `./run.sh initial-password` reads it on the host."""
+    if os.environ.get("EXCAT_BOOTSTRAP_ADMIN", "true").strip().lower() in ("false", "0", "no", "off"):
+        return None
+    f = p.secrets / "initial_admin_password"
+    if f.exists():
+        return "initial admin password: existing secret kept"
+    alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789"
+    pw = "-".join("".join(secrets.choice(alphabet) for _ in range(6)) for _ in range(4))  # ~136 bits, typeable
+    _write_secret(f, pw)
+    return "initial admin password: generated (read it with ./run.sh initial-password)"
+
+
 def ensure_redis_password(p: Paths) -> str:
     conf = p.db_secret / "redis.conf"
     if conf.exists():
@@ -218,6 +232,7 @@ def run(argv: list[str] | None = None) -> int:
     with contextlib.suppress(PermissionError):
         os.chmod(p.secrets, 0o700)
     steps = [ensure_encryption_key(p), ensure_db_password(p), ensure_redis_password(p),
+             ensure_initial_admin_password(p),
              ensure_certificate(p, configured_fqdn()), ensure_backups_dir()]
     for s in filter(None, steps):
         say(s)
