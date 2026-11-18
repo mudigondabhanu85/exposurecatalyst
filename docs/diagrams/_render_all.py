@@ -28,7 +28,9 @@ def main(out: Path) -> int:
         name = script.stem
         try:
             mod = importlib.import_module(name)
-            mod.build(out, "svg", 96)
+            # SVG at Graphviz's native 72 dpi: any other dpi scales the drawing (transform=scale(dpi/72)) without
+            # enlarging the viewBox, which clips the right and bottom of every diagram in browsers.
+            mod.build(out, "svg", 72)
             embed_svg_images(out / f"{name}.svg")
             mod.build(out, "png", 300)
             if getattr(mod, "AUTO_DRAWIO", False):

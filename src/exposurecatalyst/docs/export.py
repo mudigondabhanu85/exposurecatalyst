@@ -480,6 +480,31 @@ WIDE_RATIO = 1.45  # width / height above which a diagram gets its own landscape
 MIN_WIDE_EMU = 4 * 914400  # …and only if it is a full-width figure (≥ 4 in), never an inline image
 
 
+def _fit_tall_figures(doc) -> int:
+    """Word does not shrink a picture taller than the text area: it runs off the page and is cut. Scale tall
+    portrait figures (proportionally) to the page's usable height. Wide figures are handled by the landscape step."""
+    final = doc.element.body.find(_qn("w:sectPr"))
+    pg, mar = final.find(_qn("w:pgSz")), final.find(_qn("w:pgMar"))
+    twip = 635  # EMU per twip
+    max_h = (int(pg.get(_qn("w:h"))) - int(mar.get(_qn("w:top"))) - int(mar.get(_qn("w:bottom"))) - 1100) * twip
+    count = 0
+    for extent in doc.element.body.iter(_qn("wp:extent")):
+        cx, cy = int(extent.get("cx")), int(extent.get("cy"))
+        if cy <= max_h or cy == 0:
+            continue
+        scale = max_h / cy
+        new = (str(int(cx * scale)), str(int(cy * scale)))
+        extent.set("cx", new[0])
+        extent.set("cy", new[1])
+        inline = extent.getparent()
+        for ext in inline.iter(_qn("a:ext")):  # the picture's own size must match the frame
+            if ext.get("cx") and ext.get("cy"):
+                ext.set("cx", new[0])
+                ext.set("cy", new[1])
+        count += 1
+    return count
+
+
 def _landscape_wide_figures(doc) -> int:
     body = doc.element.body
     final = body.find(_qn("w:sectPr"))
@@ -546,6 +571,7 @@ def postprocess_docx(path: Path, guide: Guide, version: str, date: str) -> None:
         sect.append(_el("w:pgMar", top="1440", right="1440", bottom="1440", left="1440", header="720",
                         footer="720", gutter="0"))
 
+    _fit_tall_figures(doc)  # tall diagrams fit the page height instead of running off the page
     wide = _landscape_wide_figures(doc)  # before the cover, so the logo is never treated as a figure
 
     # Cover: logo above pandoc's title block, version/classification below it, page break before the TOC.
@@ -639,7 +665,11 @@ table {{ border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: .9em
 th {{ background: var(--navy); color: #fff; text-align: left; }}
 th, td {{ border: 1px solid var(--border); padding: .4rem .6rem; vertical-align: top; }}
 tr:nth-child(even) td {{ background: #F7F8FA; }}
-figure {{ margin: 1.5rem 0; }} img {{ max-width: 100%; height: auto; }}
+figure {{ margin: 1.5rem 0; text-align: center; }} img {{ max-width: 100%; height: auto; }}
+/* Diagrams fit the window (width and height) so the whole diagram is visible; click for full size. */
+figure img {{ width: auto; max-height: 85vh; object-fit: contain; cursor: zoom-in; }}
+figure img.ec-full {{ max-height: none; cursor: zoom-out; }}
+figure figcaption {{ text-align: left; }}
 figcaption {{ color: var(--slate); font-size: .85em; font-style: italic; }}
 .admonition {{ border-left: 4px solid var(--orange); background: var(--alt); padding: .6rem 1rem; margin: 1rem 0; border-radius: 0 6px 6px 0; }}
 .admonition > p:first-child {{ margin-top: 0; }}
@@ -652,7 +682,8 @@ nav#TOC {{ border-bottom: 1px solid var(--border); padding-bottom: 1rem; }}
 nav#TOC ul {{ list-style: none; padding-left: 1.2rem; }} nav#TOC > ul {{ padding-left: 0; }}
 nav#TOC a {{ text-decoration: none; }}
 .toc-title {{ font-family: "Space Grotesk", Inter, sans-serif; font-weight: 700; font-size: 1.3rem; }}
-@media print {{ h1 {{ break-before: page; }} body {{ max-width: none; }} table {{ display: table; }} }}
+@media print {{ h1 {{ break-before: page; }} body {{ max-width: none; }} table {{ display: table; }}
+  figure {{ break-inside: avoid; }} figure img, figure img.ec-full {{ max-height: 23cm; }} }}
 """
 
 
@@ -688,8 +719,13 @@ def export_all(guides: tuple[Guide, ...] = GUIDES, version: str = __version__) -
             else:
                 cover = WORK / f"{guide.id}.cover.html"
                 cover.write_text(_cover_html(guide, version, date), encoding="utf-8")
+                zoom = WORK / "zoom.html"  # click a diagram to toggle full size (no external resources)
+                zoom.write_text("<script>document.querySelectorAll('figure img').forEach(function (i) {"
+                                "i.addEventListener('click', function () { i.classList.toggle('ec-full'); }); });"
+                                "</script>\n", encoding="utf-8")
                 _run([*pandoc, _rel(src), *common, "--toc-depth=3", "-t", "html5", "-s", "--embed-resources",
                       f"--css={_rel(css)}", f"--include-before-body={_rel(cover)}",
+                      f"--include-after-body={_rel(zoom)}",
                       "-M", f"pagetitle=ExposureCatalyst {guide.title} {version}", "-M", "lang=en", "-o", _rel(out)])
             files[fmt] = {"name": out.name, "size": out.stat().st_size}
         manifest["guides"].append({"id": guide.id, "title": guide.title, "files": files})
