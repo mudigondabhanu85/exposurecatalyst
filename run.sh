@@ -239,8 +239,8 @@ all_healthy() {
 }
 
 app_version() {  # retried briefly: the proxy may still be reconnecting to a just-recreated api container
-  local v="" i
-  for i in 1 2 3 4 5; do
+  local v=""
+  for _ in 1 2 3 4 5; do
     v=$(curl -sk --max-time 5 --resolve "$FQDN:${EXCAT_HTTPS_PORT:-443}:127.0.0.1" "$URL/api/health/ready" 2>/dev/null \
         | sed -n 's/.*"version":"\([^"]*\)".*/\1/p')
     [ -n "$v" ] && break
