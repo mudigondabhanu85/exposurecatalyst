@@ -24,6 +24,7 @@ Default system roles. System roles are read-only; create custom roles in **Setti
 | `ai:use` | Use AI summaries, drafting and assistant | ✅ | — | ✅ | ✅ | — | — |
 | `ai:manage` | Configure AI providers, allowlist and redaction policy | ✅ | ✅ | — | — | — | — |
 | `audit:view` | View the immutable audit log | ✅ | ✅ | — | — | — | ✅ |
+| `intel:manage` | Add manual intel items, import intel bundles and view TLP:RED subscription intel | ✅ | ✅ | ✅ | — | — | — |
 
 ## Role descriptions
 

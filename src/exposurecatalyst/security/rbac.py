@@ -33,6 +33,7 @@ class Permission(StrEnum):
     AI_USE = "ai:use"
     AI_MANAGE = "ai:manage"
     AUDIT_VIEW = "audit:view"
+    INTEL_MANAGE = "intel:manage"  # 1.4: manual intel items, bulk import (subscriptions)
 
 
 PERMISSION_DESCRIPTIONS: dict[Permission, str] = {
@@ -54,6 +55,7 @@ PERMISSION_DESCRIPTIONS: dict[Permission, str] = {
     Permission.AI_USE: "Use AI summaries, drafting and assistant",
     Permission.AI_MANAGE: "Configure AI providers, allowlist and redaction policy",
     Permission.AUDIT_VIEW: "View the immutable audit log",
+    Permission.INTEL_MANAGE: "Add manual intel items, import intel bundles and view TLP:RED subscription intel",
 }
 
 P = Permission
@@ -68,14 +70,14 @@ DEFAULT_ROLES: dict[str, tuple[str, frozenset[Permission]]] = {
         frozenset({
             P.CVE_VIEW, P.CVE_REFRESH, P.NEWS_VIEW, P.NEWS_MANAGE, P.SOURCE_MANAGE,
             P.INTEGRATION_MANAGE, P.SETTINGS_MANAGE, P.USER_MANAGE, P.AI_MANAGE,
-            P.TEMPLATE_MANAGE, P.AUDIT_VIEW,
+            P.TEMPLATE_MANAGE, P.AUDIT_VIEW, P.INTEL_MANAGE,
         }),
     ),
     "Security Analyst": (
         "Triages CVEs and prepares, exports and sends approved advisories.",
         frozenset({
             P.CVE_VIEW, P.CVE_REFRESH, P.ADVISORY_CREATE, P.ADVISORY_SEND, P.ADVISORY_EXPORT,
-            P.NEWS_VIEW, P.AI_USE,
+            P.NEWS_VIEW, P.AI_USE, P.INTEL_MANAGE,
         }),
     ),
     "Approver": (

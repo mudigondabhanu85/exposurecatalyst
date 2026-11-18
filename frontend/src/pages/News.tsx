@@ -1,4 +1,5 @@
 import { type FormEvent } from "react";
+import { NewsIntelSection } from "../components/Intel";
 import { Link, useSearchParams } from "react-router-dom";
 import { keepPreviousData, useMutation, useQuery } from "@tanstack/react-query";
 import { api, fmtDateTime } from "../api";
@@ -82,6 +83,7 @@ export default function NewsPage() {
             <button className="btn-secondary" disabled={page >= pages} onClick={() => { const n = new URLSearchParams(params); n.set("page", String(page + 1)); setParams(n); }}>Next</button></span>
         </nav>
       )}
+      <NewsIntelSection />
       <p className="mt-6 text-xs text-ec-slate">Headlines and short excerpts only; read full articles at the source.</p>
     </>
   );

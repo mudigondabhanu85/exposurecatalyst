@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { CveIntelPanel } from "../components/Intel";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, fmtDate, fmtDateTime, pct, type CveDetail } from "../api";
@@ -125,6 +126,7 @@ export default function CveDetailPage() {
         </div>
 
         <div className="space-y-4">
+          <CveIntelPanel cveId={cveId} />
           <section className="card">
             <h2 className="mb-2 flex items-center gap-1 font-semibold">Affected assets<InfoTip k="affected_assets" /></h2>
             {assets.data && !assets.data.integrations_configured ? (

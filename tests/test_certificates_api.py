@@ -357,6 +357,10 @@ def test_migration_0008_upgrade_downgrade(tmp_path, monkeypatch):
     url = f"sqlite:///{tmp_path / 'mig.db'}"
     monkeypatch.setenv("EXCAT_DATABASE_URL", url)
     monkeypatch.setenv("EXCAT_ENV", "test")
+    from exposurecatalyst.config import get_settings
+
+    get_settings.cache_clear()  # migrations/env.py reads the cached settings
+    monkeypatch.setattr("exposurecatalyst.config.get_settings", get_settings)
     cfg = _alembic_config()
     cfg.set_main_option("sqlalchemy.url", url)
     command.upgrade(cfg, "0008")
@@ -366,3 +370,4 @@ def test_migration_0008_upgrade_downgrade(tmp_path, monkeypatch):
     tables = set(inspect(create_engine(url)).get_table_names())
     assert "tls_certificates" not in tables and "tls_csrs" not in tables and "advisory_actions" in tables
     command.upgrade(cfg, "head")
+    get_settings.cache_clear()

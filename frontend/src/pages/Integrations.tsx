@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, fmtDateTime } from "../api";
 import { HealthBadge, PageHeader, ErrorNote, EmptyState } from "../components/ui";
+import SubscriptionsSettings from "./Subscriptions";
 
 interface Field { key: string; label: string; kind: string; required: boolean; default: unknown; help: string; options: string[] }
 interface Spec {
@@ -208,6 +209,7 @@ export default function IntegrationsSettings() {
           </section>
         );
       })}
+      <SubscriptionsSettings />
     </>
   );
 }

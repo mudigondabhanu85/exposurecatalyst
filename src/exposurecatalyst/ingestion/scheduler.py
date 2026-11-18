@@ -53,6 +53,8 @@ def _add_jobs(scheduler, settings: Settings) -> None:
     )
     scheduler.add_job(_tls_expiry, "interval", hours=6, args=[settings], id="tls-expiry", max_instances=1,
                       coalesce=True, replace_existing=True)
+    scheduler.add_job(_subscriptions, "interval", minutes=5, args=[settings], id="subscriptions", max_instances=1,
+                      coalesce=True, replace_existing=True)
 
 
 def _tls_expiry(settings: Settings) -> None:
@@ -63,6 +65,18 @@ def _tls_expiry(settings: Settings) -> None:
             tls.expiry_alerts(db, settings)
     except Exception:  # noqa: BLE001 - never let a reminder break the scheduler
         log.exception("tls_expiry_check_failed")
+
+
+def _subscriptions(settings: Settings) -> None:
+    """Licensed intel pulls + renewal reminders (no-op unless features.subscriptions)."""
+    if not settings.features.subscriptions:
+        return
+    from exposurecatalyst.subscriptions.service import tick
+
+    try:
+        tick(settings, get_session_factory())
+    except Exception:  # noqa: BLE001 - never let a subscription break the scheduler
+        log.exception("subscriptions_tick_failed")
 
 
 def start_background(settings: Settings) -> BackgroundScheduler:

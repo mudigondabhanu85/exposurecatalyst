@@ -31,6 +31,9 @@ DOCS_CSP = (
 # Advisory preview iframe: email HTML needs inline styles; no scripts, sandboxed, same-origin framing only.
 EMAIL_PREVIEW_CSP = "default-src 'none'; img-src data:; style-src 'unsafe-inline'; frame-ancestors 'self'; sandbox"
 _PREVIEW_PATH = re.compile(r"^/api/advisories/\d+/preview$")
+# Intel attachments (licensed PDFs / HTML): always downloads, sandboxed even if a browser renders them.
+ATTACHMENT_CSP = "default-src 'none'; sandbox"
+_ATTACHMENT_PATH = re.compile(r"^/api/subscriptions/attachments/\d+$")
 UNSAFE_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 # Cross-site by design and not cookie-authenticated: the IdP's SAML POST and bearer-token SCIM.
 ORIGIN_EXEMPT = ("/api/auth/saml/acs", "/scim/")
@@ -51,7 +54,8 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         loose = path.startswith("/docs") or path in ("/api/docs", "/api/redoc")
         preview = bool(_PREVIEW_PATH.match(path))
         response.headers["Content-Security-Policy"] = (
-            EMAIL_PREVIEW_CSP if preview else DOCS_CSP if loose else self.app_csp)
+            ATTACHMENT_CSP if _ATTACHMENT_PATH.match(path)
+            else EMAIL_PREVIEW_CSP if preview else DOCS_CSP if loose else self.app_csp)
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["X-Frame-Options"] = "SAMEORIGIN" if preview else "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"

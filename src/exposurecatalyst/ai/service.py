@@ -232,6 +232,14 @@ def cve_context(db: Session, cve: Cve, red: Redactor) -> tuple[str, str]:
         f"Our exposure (from integrations): {len(findings)} asset finding(s); "
         f"by environment: {envs or 'none recorded'}\n{sample}"
     )
+    from exposurecatalyst.config import get_settings
+
+    if get_settings().features.subscriptions:  # licensed intel: only sources that allow AI, never TLP:RED
+        from exposurecatalyst.subscriptions.service import ai_intel_text
+
+        licensed = ai_intel_text(db, cve.cve_id)
+        if licensed:
+            text += f"\n\nLicensed threat intelligence (redistribution to AI permitted):\n{licensed}"
     return f"cve {cve.cve_id}", text
 
 

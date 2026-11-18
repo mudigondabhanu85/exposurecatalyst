@@ -17,6 +17,7 @@ from exposurecatalyst.models.integration import (
     IntegrationCveCheck,
     IntegrationVulnMap,
 )
+from exposurecatalyst.models.intel import IntelAttachment, IntelItem, IntelSubscription
 from exposurecatalyst.models.phase5 import AiProvider, AiUsage, NewsFeed, NewsItem
 from exposurecatalyst.models.sso import (
     AlertEvent,
@@ -60,6 +61,9 @@ __all__ = [
     "IntegrationCveCheck",
     "IntegrationVulnMap",
     "AuditLog",
+    "IntelAttachment",
+    "IntelItem",
+    "IntelSubscription",
     "TlsCertificate",
     "TlsCsr",
     "Cve",
