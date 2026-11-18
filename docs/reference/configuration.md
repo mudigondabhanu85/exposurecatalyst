@@ -66,7 +66,9 @@ Every setting is an environment variable with the `EXCAT_` prefix (also read fro
 | `EXCAT_EGRESS_ALLOWLIST` | `str` | `services.nvd.nist.gov,www.cisa.gov,api.first.org,epss.empiricalsecurity.com` | Comma-separated hostnames the app may call. `*.example.com` matches subdomains. |
 | `EXCAT_SSRF_ALLOW_PRIVATE_NETWORKS` | `bool` | `False` | Allow outbound calls to private/loopback/link-local/metadata addresses. Keep false unless an on-prem integration requires it. |
 | `EXCAT_SSRF_RESOLVE_DNS` | `bool` | `True` | Resolve hostnames and block private results (DNS rebinding guard). |
-| `EXCAT_ADVISORY_SOURCES` | `str` | `Qualys,Tanium,Wiz,Zafran,ArmorCode,ServiceNow CMDB` | Rows shown in every advisory's asset validation matrix (comma-separated, in order). |
+| `EXCAT_ADVISORY_SOURCES` | `str` | `` | Extra tools always added to a new advisory's asset validation matrix (comma-separated, in order), e.g. tools you report on manually. Enabled asset-source integrations are always added; analysts choose per advisory which tools appear in the email. |
+| `EXCAT_ADVISORY_SLA_DAYS` | `dict` | `{'CRITICAL': 7, 'HIGH': 14, 'MEDIUM': 30, 'LOW': 90}` | Default remediation due date per severity, in days from advisory creation (a still-future CISA KEV due date wins when earlier). |
+| `EXCAT_ADVISORY_REMEDIATION_TIMEFRAMES` | `dict` | `{}` | Remediation timeframes by asset classification, per severity — shown in exposure-analysis emails and used for each asset's due date in the Excel file. Example (YAML): `HIGH: {"HTA Infrastructure Components": 60, "Cloud Infrastructure": 60}`. Empty = only the single SLA due date is shown. |
 | `EXCAT_UPLOAD_MAX_BYTES` | `int` | `5242880` | Maximum size of a CSV/XLSX asset upload (bytes). |
 | `EXCAT_UPLOAD_MAX_ROWS` | `int` | `10000` | Maximum rows imported from one asset upload. |
 | `EXCAT_SMTP_ALLOWED_PORTS` | `str` | `25,465,587,2525` | Ports an admin may configure for the SMTP relay. |

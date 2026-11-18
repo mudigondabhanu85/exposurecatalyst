@@ -58,3 +58,13 @@ features:
   acme: false                # ACME / Let's Encrypt (HTTP-01 or DNS-01) for internet-reachable deployments
   subscriptions: false       # Integrations → Threat Intel & News Subscriptions (paid sources, manual intel)
   run_watch_mode: false      # ./run.sh watch: poll for changes and apply them (dev/test only)
+
+# --- Advisories ---------------------------------------------------------------------------------------------
+# [app] Extra tools always added to a new advisory's matrix (enabled integrations are always added).
+# advisory_sources: "Tanium"
+# [app] Default remediation due date per severity (days).
+# advisory_sla_days: {CRITICAL: 7, HIGH: 14, MEDIUM: 30, LOW: 90}
+# [app] Remediation timeframes by asset classification (Exposure Analysis email + per-asset due dates in Excel).
+# advisory_remediation_timeframes:
+#   CRITICAL: {"HTA Infrastructure Components": 30, "Cloud Infrastructure": 30, "Non-HTA Infrastructure Components": 45}
+#   HIGH: {"HTA Infrastructure Components": 60, "Cloud Infrastructure": 60, "Non-HTA Infrastructure Components": 75}

@@ -1,0 +1,16 @@
+<p style="margin:8px 0 12px 0;">The vulnerability management team has completed the vulnerability and exposure analysis for <strong>{{ advisory.cve_id }}</strong>.</p>
+{{ components.methodology }}
+{{ components.heading("Summary") }}
+{{ components.tool_summary }}
+{{ components.heading("Vulnerability analysis") }}
+{{ components.vulnerability_analysis }}
+{{ components.section("Description", advisory.summary) }}
+{{ components.section("Business impact", advisory.business_impact) }}
+{{ components.affected_products_table }}
+{{ components.section("Mitigation and remediation", advisory.remediation) }}
+{{ components.section("Workaround / compensating controls", advisory.workaround) }}
+{{ components.source_notes }}
+{{ components.references }}
+{{ components.role_actions }}
+{{ components.remediation_timeframes }}
+<p style="margin:12px 0 0 0;">Please review the attached inventory, engage the appropriate support teams and begin remediation planning as soon as possible. Confirm progress to <strong>{{ advisory.owner_contact or "Security Operations" }}</strong>, quoting {{ advisory.advisory_id }}.</p>

@@ -5,7 +5,7 @@ from __future__ import annotations
 import csv
 import io
 import re
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import Any
 
 from openpyxl import Workbook, load_workbook
@@ -15,7 +15,7 @@ from openpyxl.utils import get_column_letter
 from openpyxl.worksheet.worksheet import Worksheet
 
 from exposurecatalyst.advisories.render import _cve_view, logo_bytes
-from exposurecatalyst.advisories.service import exposure
+from exposurecatalyst.advisories.service import DETECTION_METHODS, exposure, remediation_timeframes, shown_assets
 from exposurecatalyst.models import Advisory, Cve
 
 NAVY = "0B1B33"
@@ -31,9 +31,11 @@ _FORMULA_PREFIX = ("=", "+", "-", "@", "\t", "\r")
 ASSET_COLUMNS = [
     ("hostname", "Hostname"), ("ip_address", "IP address"), ("os", "OS"), ("cloud_account", "Cloud account"),
     ("resource_id", "Resource ID"), ("owner", "Owner"), ("business_unit", "Business unit"),
-    ("environment", "Environment"), ("detection_date", "Detection date"), ("source", "Source"),
-    ("source_ref", "Plugin / QID / ID"), ("entry", "Entry"),
+    ("environment", "Environment"), ("support_group", "Support group"), ("asset_class", "Asset class"),
+    ("due", "Remediation due"), ("detection_date", "Detection date"), ("source", "Source"),
+    ("source_ref", "Plugin / QID / ID"), ("detection_method", "Detection method"), ("entry", "Entry"),
 ]
+UNASSIGNED = "(Unassigned)"
 
 
 def safe_cell(value: Any) -> Any:
@@ -87,9 +89,47 @@ def _sheet_name(name: str, used: set[str]) -> str:
     return candidate
 
 
+def _ownership_sheet(wb: Workbook, unique: list[dict]) -> None:
+    """Unique affected assets by division (business unit), by support group, and division × support group."""
+    ws = wb.create_sheet(title="Ownership Summary")
+
+    def tally(keyf) -> list[tuple[Any, int]]:
+        counts: dict[Any, int] = {}
+        for u in unique:
+            k = keyf(u)
+            counts[k] = counts.get(k, 0) + 1
+        return sorted(counts.items(), key=lambda kv: (-kv[1], str(kv[0])))
+
+    div = lambda u: u["business_unit"] or UNASSIGNED  # noqa: E731
+    grp = lambda u: u["support_group"] or UNASSIGNED  # noqa: E731
+    row = 1
+    for title, label, data in (("By division", "Division / business unit", tally(div)),
+                               ("By support group", "Support group", tally(grp))):
+        ws.cell(row=row, column=1, value=title).font = Font(name=FONT, bold=True, size=12, color=NAVY)
+        _header(ws, row + 1, [label, "Affected assets"])
+        _write_rows(ws, row + 2, [[k, v] for k, v in data] + [["Total", len(unique)]])
+        ws.cell(row=row + 2 + len(data), column=1).font = Font(name=FONT, bold=True, color=NAVY)
+        row += len(data) + 5
+    ws.cell(row=row, column=1, value="By division and support group").font = Font(name=FONT, bold=True, size=12,
+                                                                                  color=NAVY)
+    _header(ws, row + 1, ["Division / business unit", "Support group", "Affected assets"])
+    _write_rows(ws, row + 2, [[d, g, n] for (d, g), n in tally(lambda u: (div(u), grp(u)))])
+    unowned = sum(1 for u in unique if not u["support_group"])
+    if unowned:
+        r = row + 3 + len(tally(lambda u: (div(u), grp(u))))
+        ws.cell(row=r, column=1, value=f"{unowned} asset(s) have no support group — the risk owner should help "
+                                       "identify ownership.").font = Font(name=FONT, italic=True, color=NAVY)
+    _fit(ws)
+
+
 def build_workbook(adv: Advisory, cve: Cve | None) -> bytes:
     exp = exposure(adv)
     c = _cve_view(cve)
+    due_by_class = {t["asset_class"].strip().lower(): t["due"] for t in remediation_timeframes(adv)}
+
+    def due(asset_class: str | None) -> Any:
+        return due_by_class.get((asset_class or "").strip().lower(), adv.sla_due_date)
+
     wb = Workbook()
     ws = wb.active
     ws.title = "Summary"
@@ -103,10 +143,11 @@ def build_workbook(adv: Advisory, cve: Cve | None) -> bytes:
     summary = [
         ("Advisory ID", adv.advisory_id), ("CVE", adv.cve_id), ("Title", adv.title or ""),
         ("Severity", adv.severity), ("CVSS", c["cvss"]), ("EPSS", c["epss"]), ("CISA KEV", c["kev"]),
-        ("Exploit status", c["exploit"]), ("Affected products", adv.affected_products or ""),
+        ("Exploit status", c["exploit"]), ("Type", adv.vuln_type or ""),
+        ("Affected products", adv.affected_products or ""),
         ("Remediation due (SLA)", adv.sla_due_date), ("Owner / contact", adv.owner_contact or ""),
         ("Total unique affected assets", exp.total_unique), ("Status", adv.status),
-        ("Generated", datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")),  # noqa: DTZ003 - display only
+        ("Generated", datetime.now(UTC).strftime("%Y-%m-%d %H:%M UTC")),
     ]
     _header(ws, 4, ["Field", "Value"])
     _write_rows(ws, 5, [list(r) for r in summary])
@@ -116,10 +157,17 @@ def build_workbook(adv: Advisory, cve: Cve | None) -> bytes:
         ws.cell(row=r, column=1).fill = PatternFill("solid", fgColor=SURFACE_ALT)
 
     m0 = 6 + len(summary)
-    _header(ws, m0, ["Source", "Validated", "Affected asset count", "Last checked", "Entry"])
-    _write_rows(ws, m0 + 1, [[r.source, r.validated, None if r.validated == "Not Integrated" else r.asset_count,
+    _header(ws, m0, ["Source", "Check available", "Validated", "Affected asset count", "Detection method",
+                     "Last checked", "Entry", "Note"])
+    _write_rows(ws, m0 + 1, [[r.source, r.check_label, r.validated,
+                              None if r.validated == "Not Integrated" else r.asset_count, r.method_label,
                               r.last_checked.strftime("%Y-%m-%d %H:%M") if r.last_checked else "",
-                              "Manual" if r.manual else ""] for r in exp.rows])
+                              "Manual" if r.manual else "", r.note or r.finding] for r in exp.rows])
+    tf = remediation_timeframes(adv)
+    if tf:
+        t0 = m0 + 3 + len(exp.rows)
+        _header(ws, t0, ["Asset classification", "Remediation requirement (days)", "Due by"])
+        _write_rows(ws, t0 + 1, [[t["asset_class"], t["days"], t["due"]] for t in tf])
     ws.freeze_panes = "A5"
     _fit(ws)
     ws.column_dimensions["A"].width = max(ws.column_dimensions["A"].width or 0, 30)
@@ -128,17 +176,21 @@ def build_workbook(adv: Advisory, cve: Cve | None) -> bytes:
         return "Manual" if manual else "Integration"
 
     consolidated = [[u["hostname"], u["ip_address"], u["os"], u["cloud_account"], u["resource_id"], u["owner"],
-                     u["business_unit"], u["environment"], u["detection_date"], ", ".join(u["sources"]),
-                     ", ".join(u["source_refs"]), entry(u["manual"])] for u in exp.unique_assets]
+                     u["business_unit"], u["environment"], u["support_group"], u["asset_class"], due(u["asset_class"]),
+                     u["detection_date"], ", ".join(u["sources"]), ", ".join(u["source_refs"]),
+                     ", ".join(u["detection_methods"]), entry(u["manual"])] for u in exp.unique_assets]
     _asset_sheet(wb, "All Assets (Deduplicated)", consolidated)
+    _ownership_sheet(wb, exp.unique_assets)
 
-    used = {"summary", "all assets (deduplicated)"}
+    used = {"summary", "all assets (deduplicated)", "ownership summary"}
     by_source: dict[str, list] = {}
-    for a in adv.assets:
+    for a in shown_assets(adv):
         by_source.setdefault(a.source, []).append(a)
     for src, assets in by_source.items():
         rows = [[a.hostname, a.ip_address, a.os, a.cloud_account, a.resource_id, a.owner, a.business_unit,
-                 a.environment, a.detection_date, a.source, a.source_ref, entry(a.is_manual)] for a in assets]
+                 a.environment, a.support_group, a.asset_class, due(a.asset_class), a.detection_date, a.source,
+                 a.source_ref, DETECTION_METHODS.get(a.detection_method or "", a.detection_method),
+                 entry(a.is_manual)] for a in assets]
         _asset_sheet(wb, _sheet_name(src, used), rows)
 
     wb.properties.title = f"{adv.advisory_id} {adv.cve_id} affected assets"
@@ -181,10 +233,17 @@ ALIASES = {
     "detection_date": {"detection date", "detected", "first detected", "first seen", "date"},
     "source": {"source", "tool", "scanner"},
     "source_ref": {"plugin", "qid", "plugin id", "finding id", "id", "plugin / qid / id", "source ref"},
+    "support_group": {"support group", "support team", "assignment group", "resolver group", "support_group"},
+    "asset_class": {"asset class", "asset classification", "classification", "asset_class", "asset type"},
+    "detection_method": {"detection method", "method", "detection", "detection_method"},
 }
+_METHOD_ALIASES = {**{k: k for k in DETECTION_METHODS}, **{v.lower(): k for k, v in DETECTION_METHODS.items()},
+                   "scanner": "vulnerability_check", "vulnerability scan": "vulnerability_check",
+                   "inventory": "software_inventory", "software": "software_inventory", "cmdb": "asset_inventory"}
 _LOOKUP = {alias: field for field, aliases in ALIASES.items() for alias in aliases}
 LIMITS = {"hostname": 255, "ip_address": 64, "os": 128, "cloud_account": 128, "resource_id": 512, "owner": 200,
-          "business_unit": 200, "environment": 64, "source": 64, "source_ref": 128}
+          "business_unit": 200, "environment": 64, "source": 64, "source_ref": 128, "support_group": 200,
+          "asset_class": 100}
 
 
 class ImportError_(ValueError):
@@ -243,6 +302,9 @@ def parse_assets(filename: str, data: bytes, *, default_source: str, max_rows: i
             if rec.get(field) is not None:
                 clean[field] = str(rec[field]).strip()[:limit]
         clean["detection_date"] = _to_date(rec.get("detection_date"))
+        method = _METHOD_ALIASES.get(str(rec.get("detection_method") or "").strip().lower())
+        if method:
+            clean["detection_method"] = method
         clean["source"] = clean.get("source") or default_source
         out.append(clean)
     return out, errors

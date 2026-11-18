@@ -267,8 +267,21 @@ class Settings(BaseSettings):
 
     # --- Advisories & email ---------------------------------------------------------------
     advisory_sources: str = Field(
-        "Qualys,Tanium,Wiz,Zafran,ArmorCode,ServiceNow CMDB",
-        description="Rows shown in every advisory's asset validation matrix (comma-separated, in order).",
+        "",
+        description="Extra tools always added to a new advisory's asset validation matrix (comma-separated, in "
+        "order), e.g. tools you report on manually. Enabled asset-source integrations are always added; analysts "
+        "choose per advisory which tools appear in the email.",
+    )
+    advisory_sla_days: dict[str, int] = Field(
+        {"CRITICAL": 7, "HIGH": 14, "MEDIUM": 30, "LOW": 90},
+        description="Default remediation due date per severity, in days from advisory creation (a still-future "
+        "CISA KEV due date wins when earlier).",
+    )
+    advisory_remediation_timeframes: dict[str, dict[str, int]] = Field(
+        {},
+        description="Remediation timeframes by asset classification, per severity — shown in exposure-analysis "
+        "emails and used for each asset's due date in the Excel file. Example (YAML): `HIGH: {\"HTA Infrastructure "
+        "Components\": 60, \"Cloud Infrastructure\": 60}`. Empty = only the single SLA due date is shown.",
     )
     upload_max_bytes: int = Field(5_242_880, ge=10_240, description="Maximum size of a CSV/XLSX asset upload (bytes).")
     upload_max_rows: int = Field(10_000, ge=10, description="Maximum rows imported from one asset upload.")

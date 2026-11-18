@@ -88,17 +88,24 @@ export const fmtDateTime = (s: string | null | undefined) => (s ? s.replace("T",
 export const pct = (n: number | null | undefined, digits = 1) => (n === null || n === undefined ? "—" : `${(n * 100).toFixed(digits)} %`);
 
 // ---- Phase 2: advisories ------------------------------------------------------------------------
-export interface MatrixRow { source: string; validated: "Yes" | "No" | "Not Integrated"; asset_count: number; last_checked: string | null; manual: boolean; manual_count: number | null }
+export type DetectionMethod = "vulnerability_check" | "software_inventory" | "asset_inventory" | "manual";
+export interface MatrixRow {
+  source: string; validated: "Yes" | "No" | "Not Integrated"; asset_count: number; last_checked: string | null; manual: boolean; manual_count: number | null;
+  shown: boolean; check_available: boolean | null; detection_method: DetectionMethod | null; note: string | null; finding: string;
+}
+export interface AdvisoryTools { integrated: string[]; catalog: string[]; detection_methods: Record<DetectionMethod, string> }
 export interface AdvisoryAsset {
   id: number; source: string; hostname: string | null; ip_address: string | null; os: string | null; cloud_account: string | null;
   resource_id: string | null; owner: string | null; business_unit: string | null; environment: string | null;
   detection_date: string | null; source_ref: string | null; is_manual: boolean;
+  support_group: string | null; asset_class: string | null; detection_method: DetectionMethod | null;
 }
 export interface Advisory {
   id: number; advisory_id: string; cve_id: string; status: "draft" | "in_review" | "approved" | "sent" | "cancelled";
   template_id: number; template_name: string; template_version: number; subject: string; severity: string; title: string | null;
   summary: string | null; business_impact: string | null; remediation: string | null; workaround: string | null;
   affected_products: string | null; owner_contact: string | null; sla_due_date: string | null;
+  vuln_type: string | null; owner_actions: string | null; support_actions: string | null;
   to_addrs: string[]; cc_addrs: string[]; bcc_addrs: string[]; created_by: string | null; created_at: string; updated_at: string;
   approved_by: string | null; approved_at: string | null; review_comment: string | null; sent_at: string | null;
   matrix: MatrixRow[]; total_unique_assets: number; assets: AdvisoryAsset[];

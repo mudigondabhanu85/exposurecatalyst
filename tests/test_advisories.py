@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import email
 import io
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from email import policy
 
 import pytest
@@ -60,7 +60,7 @@ def test_create_prefills_from_cve(analyst, cve):
     assert a["advisory_id"] == f"EXCAT-{year}-0001" and a["status"] == "draft"
     assert a["template_name"] == "Critical" and a["severity"] == "CRITICAL"
     assert a["subject"] == f"[CRITICAL] EXCAT-{year}-0001 Security Advisory: CVE-2024-21762 – Fortinet Fortios – 0 assets affected"
-    assert [r["validated"] for r in a["matrix"]] == ["Not Integrated"] * 6
+    assert a["matrix"] == []  # no integrations and no configured tools: the analyst picks tools per advisory
     assert "Apply mitigations" in a["remediation"]
     assert _new(analyst)["advisory_id"] == f"EXCAT-{year}-0002"
     assert analyst.post("/api/advisories", json={"cve_id": "CVE-2099-0001"}).status_code == 404
@@ -69,6 +69,8 @@ def test_create_prefills_from_cve(analyst, cve):
 def test_matrix_validated_yes_only_when_assets_found_and_dedup(analyst, cve):
     a = _new(analyst)
     base = f"/api/advisories/{a['id']}"
+    for tool in ("Qualys", "Tanium", "Wiz", "Zafran", "ArmorCode"):
+        analyst.put(f"{base}/sources/{tool}", json={"shown": True})
     analyst.post(f"{base}/assets", json={"source": "Qualys", "hostname": "WEB01.corp.", "ip_address": "10.0.0.5"})
     analyst.post(f"{base}/assets", json={"source": "Wiz", "ip_address": "10.0.0.5", "resource_id": "i-0abc"})
     analyst.post(f"{base}/assets", json={"source": "Wiz", "resource_id": "I-0ABC", "owner": "team-a"})
@@ -129,7 +131,8 @@ def test_eml_is_outlook_draft_with_cid_logo_and_excel(analyst, approver, cve):
     assert len(images) == 1 and images[0]["Content-ID"] == "<excat-logo>"
     att = next(msg.iter_attachments())
     assert att.get_filename() == f"{a['advisory_id']}_CVE-2024-21762_affected_assets.xlsx"
-    assert "Not Integrated" in msg.get_body(("plain",)).get_content()
+    plain = msg.get_body(("plain",)).get_content()
+    assert "ASSET VALIDATION MATRIX" in plain and "Qualys" in plain and "REFERENCES" in plain
 
 
 def test_html_pdf_clipboard_use_data_uri(analyst, approver, cve):
@@ -152,7 +155,7 @@ def test_excel_branding_dedup_and_formula_injection(analyst, approver, cve):
     analyst.post(f"{base}/submit")
     approver.post(f"{base}/approve", json={})
     wb = load_workbook(io.BytesIO(analyst.get(f"{base}/export/xlsx").content))
-    assert wb.sheetnames == ["Summary", "All Assets (Deduplicated)", "Qualys", "Wiz"]
+    assert wb.sheetnames == ["Summary", "All Assets (Deduplicated)", "Ownership Summary", "Qualys", "Wiz"]
     summary = wb["Summary"]
     assert len(summary._images) == 1
     import zipfile
@@ -164,7 +167,7 @@ def test_excel_branding_dedup_and_formula_injection(analyst, approver, cve):
     assert header.font.color.rgb.endswith("FFFFFF")
     q = wb["Qualys"]
     assert q.freeze_panes == "A2" and q["A2"].value.startswith("'=") and q["A2"].data_type == "s"
-    assert q["F2"].value == "'+cmd" and q["L2"].value == "Manual"
+    assert q["F2"].value == "'+cmd" and q["P2"].value == "Manual"
     assert q.column_dimensions["A"].width > 10
 
 
@@ -256,7 +259,7 @@ def test_template_sandbox_blocks_ssti(body):
 def test_template_versioning_and_sod(login, approver, cve):
     author = login("Admin", username="tpladmin")  # Admin holds template:manage
     tpls = author.get("/api/templates").json()
-    assert {t["name"] for t in tpls} == {"Critical", "High", "Informational", "Executive"}
+    assert {t["name"] for t in tpls} == {"Critical", "High", "Informational", "Executive", "Exposure Analysis"}
     crit = next(t for t in tpls if t["kind"] == "critical")
     r = author.post(f"/api/templates/{crit['id']}/versions",
                     json={"subject_template": "[{{ advisory.severity }}] {{ advisory.advisory_id }} {{ advisory.cve_id }}",
@@ -278,3 +281,82 @@ def test_sla_ignores_past_kev_due_date(analyst, cve):
         s.commit()
     a = _new(analyst)
     assert a["sla_due_date"] == str(date.today() + timedelta(days=7))
+
+
+@pytest.fixture
+def linux_cve(app):
+    with get_session_factory()() as s:
+        s.add(Cve(cve_id="CVE-2026-99288", title="Linux kernel race condition", description="Race in the kernel.",
+                  severity="HIGH", cvss_score=7.5, cvss_version="3.1", kev=False, exploit_available=False,
+                  provenance={}, cvss_metrics=[], cwes=["CWE-362"],
+                  references=[{"url": "https://access.redhat.com/security/cve/cve-2026-99288", "source": "rh",
+                               "tags": ["Vendor Advisory"]}, {"url": "javascript:alert(1)", "tags": []}],
+                  products=[CveProduct(vendor="linux", product="linux_kernel", source="nvd",
+                                       version_start_including="6.12", version_end_excluding="6.12.117"),
+                            CveProduct(vendor="linux", product="linux_kernel", source="nvd",
+                                       version_end_excluding="7.3.4")]))
+        s.commit()
+
+
+def test_exposure_analysis_template(analyst, approver, linux_cve, settings):
+    settings.advisory_remediation_timeframes = {"HIGH": {"HTA Infrastructure Components": 60, "Cloud Infrastructure": 60,
+                                                         "Non-HTA Infrastructure Components": 75}}
+    tpl = next(t for t in analyst.get("/api/templates").json() if t["kind"] == "exposure_analysis")
+    a = analyst.post("/api/advisories", json={"cve_id": "CVE-2026-99288", "template_id": tpl["id"]}).json()
+    assert a["vuln_type"] == "Race condition due to improper synchronization (CWE-362)"
+    assert a["owner_actions"].startswith("- Engage") and a["affected_products"] == "Linux Kernel"
+    base = f"/api/advisories/{a['id']}"
+    analyst.put(f"{base}/sources/Qualys", json={"check_available": True, "detection_method": "vulnerability_check",
+                                                "manual_count": 0})
+    analyst.put(f"{base}/sources/Tanium", json={"check_available": False, "detection_method": "software_inventory"})
+    analyst.put(f"{base}/sources/Wiz", json={"shown": True})
+    for i, (bu, grp, cls) in enumerate([("Ratings", "Wipro Linux", "HTA Infrastructure Components"),
+                                        ("Ratings", None, "Cloud Infrastructure"),
+                                        ("Indices", "Wipro Linux", None)]):
+        analyst.post(f"{base}/assets", json={"source": "Tanium", "hostname": f"lnx{i}", "business_unit": bu,
+                                             "support_group": grp, "asset_class": cls,
+                                             "detection_method": "software_inventory"})
+    analyst.post(f"{base}/assets", json={"source": "Wiz", "hostname": "hidden-box"})
+    r = analyst.put(f"{base}/sources/Wiz", json={"shown": False}).json()
+    m = {row["source"]: row for row in r["matrix"]}
+    assert r["total_unique_assets"] == 3 and m["Wiz"]["shown"] is False  # hidden tool's asset not counted
+    assert m["Qualys"]["validated"] == "No" and m["Qualys"]["check_available"] is True
+    assert "no vulnerable instances" in m["Qualys"]["finding"]
+    assert "potentially vulnerable" in m["Tanium"]["finding"] and "unavailable in Tanium" in m["Tanium"]["finding"]
+    analyst.put(f"{base}/sources/Tanium", json={"note": "Exposure found via software inventory search."})
+
+    html = analyst.get(f"{base}/preview").text
+    for text in ("Checks available", "Instances found", "Software inventory", "Before 7.3.4",
+                 "From 6.12 before 6.12.117", "Race condition due to improper synchronization",
+                 "https://nvd.nist.gov/vuln/detail/CVE-2026-99288", "access.redhat.com",
+                 "Exposure found via software inventory search.", "Risk owner (BISO) actions",
+                 "Support team actions", "HTA Infrastructure Components", "75 days", "<strong>potentially</strong>"):
+        assert text in html, text
+    assert "javascript:" not in html and "hidden-box" not in html and ">Wiz<" not in html
+
+    analyst.patch(base, json={"to_addrs": ["ops@example.com"], "owner_actions": "Plain sentence, no bullets."})
+    analyst.post(f"{base}/submit")
+    approver.post(f"{base}/approve", json={})
+    wb = load_workbook(io.BytesIO(analyst.get(f"{base}/export/xlsx").content))
+    assert "Wiz" not in wb.sheetnames and "Tanium" in wb.sheetnames
+    own = [[c.value for c in row] for row in wb["Ownership Summary"].iter_rows()]
+    assert ["Ratings", 2] in [r[:2] for r in own] and ["(Unassigned)", 1] in [r[:2] for r in own]
+    assets = wb["All Assets (Deduplicated)"]
+    header = [c.value for c in assets[1]]
+    rows = {r[0]: dict(zip(header, r, strict=False)) for r in assets.iter_rows(min_row=2, values_only=True)}
+    assert rows["lnx0"]["Support group"] == "Wipro Linux" and rows["lnx0"]["Detection method"] == "Software inventory"
+    created = datetime.fromisoformat(a["created_at"]).date()
+    assert rows["lnx0"]["Remediation due"].date() == created + timedelta(days=60)
+    assert rows["lnx2"]["Remediation due"].date().isoformat() == a["sla_due_date"]  # no class → advisory SLA
+    plain = analyst.get(f"{base}/export/eml").content.decode(errors="replace")
+    assert "REMEDIATION TIMEFRAMES" in plain
+
+
+def test_upload_maps_support_group_and_method(analyst, cve):
+    a = _new(analyst)
+    data = b"Host,Assignment Group,Asset Classification,Detection Method\nweb09,Linux Ops,Cloud Infrastructure,Inventory\n"
+    body = analyst.post(f"/api/advisories/{a['id']}/assets/upload", files={"file": ("a.csv", data, "text/csv")},
+                        data={"default_source": "Tanium"}).json()
+    x = body["advisory"]["assets"][0]
+    assert (x["support_group"], x["asset_class"], x["detection_method"]) == ("Linux Ops", "Cloud Infrastructure",
+                                                                              "software_inventory")

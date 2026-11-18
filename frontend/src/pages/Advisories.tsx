@@ -1,7 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
+import { Fragment, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { Link, Route, Routes, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, fmtDateTime, upload, type Advisory, type AdvisorySummary, type DistList, type Template } from "../api";
+import { api, fmtDateTime, upload, type Advisory, type AdvisoryTools, type AdvisorySummary, type DistList, type MatrixRow, type Template } from "../api";
 import { useAuth } from "../auth";
 import { InfoTip } from "../help";
 import { EmptyState, ErrorNote, PageHeader, SeverityBadge } from "../components/ui";
@@ -19,6 +19,12 @@ const STATUS_STYLE: Record<string, string> = {
 export const StatusBadge = ({ status }: { status: string }) => (
   <span className={`rounded-sm px-2 py-0.5 text-xs font-semibold capitalize ${STATUS_STYLE[status] ?? ""}`}>{status.replace("_", " ")}</span>
 );
+
+const TEXT_FIELDS = ["subject", "title", "summary", "business_impact", "remediation", "workaround", "affected_products", "owner_contact", "vuln_type", "owner_actions", "support_actions"] as const;
+/** Template components that print a field, so a template using the component counts as using the field. */
+const FIELD_COMPONENTS: Record<string, string[]> = {
+  owner_actions: ["role_actions"], support_actions: ["role_actions"], vuln_type: ["vulnerability_analysis"],
+};
 
 const ADVISORY_PERMS = ["advisory:create", "advisory:approve", "advisory:send", "advisory:export"];
 
@@ -136,8 +142,16 @@ function AdvisoryEditor() {
   const aiOn = useAi();
   const draft = useMutation({ mutationFn: () => api<{ suggestion: Record<string, string>; provider: string; model: string; redacted_values: number; fallbacks: string[]; note: string }>(`/api/ai/advisories/${id}/draft`, { method: "POST" }) });
   const set = (a: Advisory) => { qc.setQueryData(key, a); setPreviewKey((k) => k + 1); };
+  // Message fields auto-save when you leave a field. Saves are queued so a following action (Submit, a matrix
+  // change) never overtakes them. The form is re-mounted only when the server changed message fields itself.
+  const saving = useRef<Promise<unknown>>(Promise.resolve());
+  const [formKey, setFormKey] = useState(0);
+  const refreshForm = () => setFormKey((k) => k + 1);
   const call = useMutation({
-    mutationFn: ({ path, method = "POST", body }: { path: string; method?: string; body?: unknown }) => api<Advisory>(`/api/advisories/${id}${path}`, { method, body }),
+    mutationFn: async ({ path, method = "POST", body }: { path: string; method?: string; body?: unknown }) => {
+      await saving.current.catch(() => undefined);
+      return api<Advisory>(`/api/advisories/${id}${path}`, { method, body });
+    },
     onSuccess: (a) => { set(a); qc.invalidateQueries({ queryKey: ["advisories"] }); },
   });
   const a = q.data;
@@ -146,15 +160,38 @@ function AdvisoryEditor() {
   const editable = a.status === "draft" && can("advisory:create");
   const exportable = (a.status === "approved" || a.status === "sent") && can("advisory:export");
 
-  const saveFields = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const fd = new FormData(e.currentTarget);
+  const saveMessage = (form: HTMLFormElement, all: boolean) => {
+    if (!editable) return;
+    const saved = qc.getQueryData<Advisory>(key) ?? a;
+    const fd = new FormData(form);
     const body: Record<string, unknown> = {};
-    for (const k of ["subject", "title", "summary", "business_impact", "remediation", "workaround", "affected_products", "owner_contact"]) body[k] = String(fd.get(k) ?? "");
-    body.sla_due_date = fd.get("sla_due_date") || null;
-    for (const k of ["to_addrs", "cc_addrs", "bcc_addrs"]) body[k] = splitEmails(String(fd.get(k) ?? ""));
-    call.mutate({ path: "", method: "PATCH", body }, { onSuccess: () => setNote("Saved") });
+    for (const k of TEXT_FIELDS) {
+      const v = String(fd.get(k) ?? "");
+      if (all || v !== (saved[k] ?? "")) body[k] = v;
+    }
+    const sla = String(fd.get("sla_due_date") || "") || null;
+    if (all || sla !== saved.sla_due_date) body.sla_due_date = sla;
+    for (const k of ["to_addrs", "cc_addrs", "bcc_addrs"] as const) {
+      const v = splitEmails(String(fd.get(k) ?? ""));
+      if (all || v.join(",") !== saved[k].join(",")) body[k] = v;
+    }
+    if (!Object.keys(body).length) return;
+    const p = saving.current.catch(() => undefined).then(() => api<Advisory>(`/api/advisories/${id}`, { method: "PATCH", body }));
+    saving.current = p;
+    p.then((adv) => { set(adv); setNote("Saved — preview updated."); qc.invalidateQueries({ queryKey: ["advisories"] }); },
+      (err) => setNote(`Not saved: ${(err as Error).message}`));
   };
+  const saveFields = (e: FormEvent<HTMLFormElement>) => { e.preventDefault(); saveMessage(e.currentTarget, true); };
+  const tplBody = templates.data?.find((t) => t.id === a.template_id)?.versions.find((v) => v.version === a.template_version)?.body_template;
+  const unused = (field: string) => tplBody !== undefined && ![field, ...(FIELD_COMPONENTS[field] ?? [])].some((n) => tplBody.includes(n));
+  const exposureTpl = templates.data?.find((t) => t.kind === "exposure_analysis" && t.versions.some((v) => v.status === "approved"));
+  const unusedHint = (field: string) => unused(field) && (
+    <p className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[#5C4200]">
+      <span>The email currently uses the “{a.template_name}” template, which doesn't include this section.</span>
+      {editable && exposureTpl && exposureTpl.id !== a.template_id && <button type="button" className="underline font-semibold"
+        onClick={() => call.mutate({ path: "", method: "PATCH", body: { template_id: exposureTpl.id } }, { onSuccess: () => setNote(`Switched to the ${exposureTpl.name} template.`) })}>
+        Use the {exposureTpl.name} template</button>}
+    </p>);
 
   const copyForOutlook = async () => {
     try {
@@ -185,7 +222,7 @@ function AdvisoryEditor() {
   };
 
   const applyList = (l: DistList) => call.mutate({ path: "", method: "PATCH", body: {
-    to_addrs: [...new Set([...a.to_addrs, ...l.to_addrs])], cc_addrs: [...new Set([...a.cc_addrs, ...l.cc_addrs])], bcc_addrs: [...new Set([...a.bcc_addrs, ...l.bcc_addrs])] } });
+    to_addrs: [...new Set([...a.to_addrs, ...l.to_addrs])], cc_addrs: [...new Set([...a.cc_addrs, ...l.cc_addrs])], bcc_addrs: [...new Set([...a.bcc_addrs, ...l.bcc_addrs])] } }, { onSuccess: refreshForm });
   const saveList = async () => {
     const name = window.prompt("Name for this distribution list");
     if (!name) return;
@@ -230,7 +267,7 @@ function AdvisoryEditor() {
           {draft.data && (<>
             <ul className="space-y-3">{Object.entries(draft.data.suggestion).map(([k, v]) => (
               <li key={k} className="rounded-md bg-ec-surface-alt p-3"><div className="mb-1 flex items-center justify-between"><span className="label mb-0">{k.replace("_", " ")}</span>
-                <button className="btn-secondary" onClick={() => call.mutate({ path: "", method: "PATCH", body: { [k]: v } }, { onSuccess: () => setNote(`Applied AI suggestion to ${k.replace("_", " ")} — review it before submitting.`) })}>Apply</button></div>
+                <button className="btn-secondary" onClick={() => call.mutate({ path: "", method: "PATCH", body: { [k]: v } }, { onSuccess: () => { refreshForm(); setNote(`Applied AI suggestion to ${k.replace("_", " ")} — review it before submitting.`); } })}>Apply</button></div>
                 <p className="whitespace-pre-line text-sm">{v}</p></li>))}</ul>
             <AiMeta r={draft.data} />
           </>)}
@@ -239,13 +276,13 @@ function AdvisoryEditor() {
 
       <div className="grid gap-4 xl:grid-cols-2">
         <div className="space-y-4">
-          <form onSubmit={saveFields} key={a.updated_at}>
-            <Section title="Message" actions={editable && <button className="btn-primary">Save</button>}>
+          <form onSubmit={saveFields} key={`${id}-${formKey}`} onBlur={(e) => saveMessage(e.currentTarget, false)}>
+            <Section title="Message" actions={editable && <span className="flex items-center gap-2"><span className="text-xs text-ec-slate">Saves when you leave a field</span><button className="btn-primary">Save</button></span>}>
               <fieldset disabled={!editable} className="space-y-3">
                 <div>
                   <label className="label" htmlFor="subject">Subject</label>
                   <div className="flex gap-2"><input id="subject" name="subject" className="input flex-1" defaultValue={a.subject} maxLength={300} required />
-                    {editable && <button type="button" className="btn-secondary" title="Rebuild from the template (severity, ID, CVE, product, asset count)" onClick={() => call.mutate({ path: "/subject/regenerate" })}>Regenerate</button>}</div>
+                    {editable && <button type="button" className="btn-secondary" title="Rebuild from the template (severity, ID, CVE, product, asset count)" onClick={() => call.mutate({ path: "/subject/regenerate" }, { onSuccess: refreshForm })}>Regenerate</button>}</div>
                 </div>
                 <div className="grid gap-3 md:grid-cols-3">
                   {(["to_addrs", "cc_addrs", "bcc_addrs"] as const).map((k) => (
@@ -266,9 +303,17 @@ function AdvisoryEditor() {
                   <div><label className="label" htmlFor="owner_contact">Owner / contact</label><input id="owner_contact" name="owner_contact" className="input w-full" defaultValue={a.owner_contact ?? ""} placeholder="SecOps · secops@example.com" /></div>
                   <div><label className="label" htmlFor="sla_due_date">Remediation due (SLA)<InfoTip text="Defaults to the CISA KEV due date, otherwise Critical 7 / High 14 / Medium 30 / Low 90 days." /></label><input id="sla_due_date" name="sla_due_date" type="date" className="input w-full" defaultValue={a.sla_due_date ?? ""} /></div>
                 </div>
-                <div><label className="label" htmlFor="affected_products">Affected products</label><input id="affected_products" name="affected_products" className="input w-full" defaultValue={a.affected_products ?? ""} /></div>
+                <div className="grid gap-3 md:grid-cols-2">
+                  <div><label className="label" htmlFor="affected_products">Affected products</label><input id="affected_products" name="affected_products" className="input w-full" defaultValue={a.affected_products ?? ""} /></div>
+                  <div><label className="label" htmlFor="vuln_type">Vulnerability type<InfoTip text="Prefilled from the CVE's CWE. Shown as “Type” in the vulnerability analysis." /></label><input id="vuln_type" name="vuln_type" className="input w-full" maxLength={300} defaultValue={a.vuln_type ?? ""} placeholder="e.g. Race condition (CWE-362)" />{unusedHint("vuln_type")}</div>
+                </div>
                 {(["summary", "business_impact", "remediation", "workaround"] as const).map((k) => (
-                  <div key={k}><label className="label" htmlFor={k}>{k.replace("_", " ")}</label><textarea id={k} name={k} rows={k === "summary" ? 4 : 3} className="input w-full" defaultValue={a[k] ?? ""} /></div>))}
+                  <div key={k}><label className="label" htmlFor={k}>{k.replace("_", " ")}</label><textarea id={k} name={k} rows={k === "summary" ? 4 : 3} className="input w-full" defaultValue={a[k] ?? ""} />{unusedHint(k)}</div>))}
+                <div className="grid gap-3 md:grid-cols-2">
+                  {([["owner_actions", "Risk owner (BISO) actions"], ["support_actions", "Support team actions"]] as const).map(([k, label]) => (
+                    <div key={k}><label className="label" htmlFor={k}>{label}<InfoTip text="One action per line; lines starting with “- ” become bullets. Used by the Exposure Analysis template." /></label>
+                      <textarea id={k} name={k} rows={5} className="input w-full" defaultValue={a[k] ?? ""} />{unusedHint(k)}</div>))}
+                </div>
               </fieldset>
             </Section>
           </form>
@@ -281,32 +326,22 @@ function AdvisoryEditor() {
                 setNote(r.results.length ? r.results.map((x) => `${x.source}: ${x.status === "ok" ? `${x.assets}${x.truncated ? "+" : ""} asset(s)` : `${x.status}${x.error ? ` — ${x.error}` : ""}`}`).join(" · ") : "No integrations are enabled — ask an admin to configure Settings → Integrations.");
               } catch (err) { setNote(`Pull failed: ${(err as Error).message}`); }
             }}>Pull from integrations</button>)}>
-            <table className="min-w-full text-sm">
-              <thead className="bg-ec-surface-alt"><tr><th className="th">Source</th><th className="th">Validated</th><th className="th text-right">Assets</th><th className="th">Last checked</th><th className="th">Manual count</th></tr></thead>
-              <tbody>{a.matrix.map((r) => (
-                <tr key={r.source} className="border-t border-ec-surface-alt">
-                  <td className="td">{r.source}{r.manual && <span className="ml-1 rounded-sm bg-ec-surface-alt px-1 text-[10px] font-semibold uppercase">Manual</span>}</td>
-                  <td className={`td ${r.validated === "Yes" ? "font-bold" : "text-ec-slate"}`}>{r.validated}</td>
-                  <td className="td text-right">{r.validated === "Not Integrated" ? "—" : r.asset_count}</td>
-                  <td className="td text-xs">{fmtDateTime(r.last_checked)}</td>
-                  <td className="td">{editable && <input aria-label={`${r.source} manual count`} type="number" min={0} className="input w-20" defaultValue={r.manual_count ?? ""}
-                    onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== r.manual_count) call.mutate({ path: `/sources/${encodeURIComponent(r.source)}`, method: "PUT", body: { manual_count: v } }); }} />}</td>
-                </tr>))}
-              </tbody>
-              <tfoot><tr className="border-t-2 border-ec-border"><td className="td font-bold" colSpan={2}>Total unique affected assets<InfoTip k="affected_assets" /></td><td className="td text-right font-bold">{a.total_unique_assets}</td><td colSpan={2} /></tr></tfoot>
-            </table>
-            <p className="mt-2 text-xs text-ec-slate">“Pull from integrations” queries every enabled tool and replaces integration rows (manual rows are kept). Manual counts and rows are labelled “Manual” in the email and Excel.</p>
+            <ToolMatrix a={a} editable={editable} onChange={(source, body) => call.mutate({ path: `/sources/${encodeURIComponent(source)}`, method: "PUT", body })} />
+            <p className="mt-2 text-xs text-ec-slate">Only ticked tools appear in the email, the Excel file and the totals. New advisories start with your enabled integrations; add any other tool you checked manually. “Pull from integrations” refreshes integrated tools and keeps your choices and manual rows.</p>
           </Section>
 
           <Section title={`Affected assets (${a.assets.length})`}>
             {editable && (<>
               <form onSubmit={addAsset} className="mb-3 grid grid-cols-2 gap-2 md:grid-cols-4">
-                <select name="source" className="input" aria-label="Source" required defaultValue="Qualys">{a.matrix.map((r) => <option key={r.source}>{r.source}</option>)}</select>
+                <select name="source" className="input" aria-label="Source" required>{a.matrix.map((r) => <option key={r.source}>{r.source}</option>)}</select>
                 <input name="hostname" className="input" placeholder="Hostname" aria-label="Hostname" />
                 <input name="ip_address" className="input" placeholder="IP address" aria-label="IP address" />
                 <input name="resource_id" className="input" placeholder="Cloud resource ID" aria-label="Cloud resource ID" />
                 <input name="owner" className="input" placeholder="Owner" aria-label="Owner" />
                 <input name="environment" className="input" placeholder="Environment" aria-label="Environment" />
+                <input name="business_unit" className="input" placeholder="Division / business unit" aria-label="Division or business unit" />
+                <input name="support_group" className="input" placeholder="Support group" aria-label="Support group" />
+                <input name="asset_class" className="input" placeholder="Asset class" aria-label="Asset class" />
                 <input name="source_ref" className="input" placeholder="Plugin / QID / ID" aria-label="Plugin, QID or ID" />
                 <button className="btn-primary">Add asset</button>
               </form>
@@ -318,11 +353,11 @@ function AdvisoryEditor() {
             </>)}
             {a.assets.length === 0 ? <p className="text-sm text-ec-slate">No asset rows yet.</p> : (
               <div className="max-h-80 overflow-auto"><table className="min-w-full text-xs">
-                <thead className="sticky top-0 bg-ec-surface-alt"><tr>{["Source", "Hostname", "IP", "Resource ID", "Owner", "Env", "Ref", ""].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+                <thead className="sticky top-0 bg-ec-surface-alt"><tr>{["Source", "Hostname", "IP", "Resource ID", "Owner", "Env", "Support group", "Ref", ""].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
                 <tbody>{a.assets.map((x) => (
                   <tr key={x.id} className="border-t border-ec-surface-alt">
                     <td className="td">{x.source}{x.is_manual && <span className="ml-1 text-[10px] font-semibold uppercase text-ec-slate">Manual</span>}</td>
-                    <td className="td">{x.hostname}</td><td className="td">{x.ip_address}</td><td className="td break-all">{x.resource_id}</td><td className="td">{x.owner}</td><td className="td">{x.environment}</td><td className="td">{x.source_ref}</td>
+                    <td className="td">{x.hostname}</td><td className="td">{x.ip_address}</td><td className="td break-all">{x.resource_id}</td><td className="td">{x.owner}</td><td className="td">{x.environment}</td><td className="td">{x.support_group}</td><td className="td">{x.source_ref}</td>
                     <td className="td">{editable && <button className="text-red-800 underline" aria-label={`Remove ${x.hostname ?? x.ip_address ?? "asset"}`} onClick={() => call.mutate({ path: `/assets/${x.id}`, method: "DELETE" })}>Remove</button>}</td>
                   </tr>))}
                 </tbody></table></div>)}
@@ -342,6 +377,59 @@ function AdvisoryEditor() {
 
 interface ActionTarget { id: number; name: string; kind: string; label: string; capability: "create_ticket" | "notify" }
 interface ActionRecord { id: number; integration: string; kind: string; label: string; status: string; ref: string | null; url: string | null; error: string | null; created_at: string; created_by: string | null }
+
+const CHECK_VALUES = [["", "—"], ["yes", "Yes"], ["no", "No"]] as const;
+
+function ToolMatrix({ a, editable, onChange }: { a: Advisory; editable: boolean; onChange: (source: string, body: Partial<Pick<MatrixRow, "shown" | "check_available" | "detection_method" | "note" | "manual_count">>) => void }) {
+  const tools = useQuery({ queryKey: ["advisory-tools"], queryFn: () => api<AdvisoryTools>("/api/advisory-sources"), enabled: editable });
+  const [adding, setAdding] = useState("");
+  const methods = tools.data?.detection_methods ?? { vulnerability_check: "Vulnerability check", software_inventory: "Software inventory", asset_inventory: "Asset inventory / CMDB", manual: "Manual analysis" };
+  const listed = new Set(a.matrix.map((r) => r.source));
+  const suggestions = [...(tools.data?.integrated ?? []), ...(tools.data?.catalog ?? [])].filter((t, i, all) => !listed.has(t) && all.indexOf(t) === i);
+  const shownTotal = a.matrix.filter((r) => r.shown).length;
+  const add = (e: FormEvent) => { e.preventDefault(); const name = adding.trim(); if (name) { onChange(name, { shown: true }); setAdding(""); } };
+  return (<>
+    <div className="overflow-x-auto"><table className="min-w-full text-sm">
+      <thead className="bg-ec-surface-alt"><tr>
+        <th className="th">In email</th><th className="th">Tool</th><th className="th">Check available<InfoTip text="Does this tool have a detection for the CVE? “Yes” with 0 assets reads as “checks available, no vulnerable instances”." /></th>
+        <th className="th">Validated</th><th className="th text-right">Assets</th><th className="th">Detection method</th><th className="th">Last checked</th><th className="th">Manual count</th>
+      </tr></thead>
+      <tbody>{a.matrix.map((r) => (<Fragment key={r.source}>
+        <tr className={`border-t border-ec-surface-alt ${r.shown ? "" : "opacity-60"}`}>
+          <td className="td"><input type="checkbox" aria-label={`Show ${r.source} in the email`} checked={r.shown} disabled={!editable}
+            onChange={(e) => { if (!e.target.checked && r.asset_count > 0 && !window.confirm(`${r.source} has ${r.asset_count} affected asset(s). Hide it? Its assets are then left out of the email, the Excel file and the totals.`)) return; onChange(r.source, { shown: e.target.checked }); }} /></td>
+          <td className="td">{r.source}{r.manual && <span className="ml-1 rounded-sm bg-ec-surface-alt px-1 text-[10px] font-semibold uppercase">Manual</span>}{!r.shown && <span className="ml-1 text-[10px] font-semibold uppercase text-ec-slate">Hidden</span>}</td>
+          <td className="td">{editable ? (
+            <select aria-label={`${r.source} check available`} className="input" value={r.check_available === null ? "" : r.check_available ? "yes" : "no"}
+              onChange={(e) => onChange(r.source, { check_available: e.target.value === "" ? null : e.target.value === "yes" })}>
+              {CHECK_VALUES.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>) : (r.check_available === null ? "—" : r.check_available ? "Yes" : "No")}</td>
+          <td className={`td ${r.validated === "Yes" ? "font-bold" : "text-ec-slate"}`}>{r.validated}</td>
+          <td className="td text-right">{r.validated === "Not Integrated" ? "—" : r.asset_count}</td>
+          <td className="td">{editable ? (
+            <select aria-label={`${r.source} detection method`} className="input" value={r.detection_method ?? ""}
+              onChange={(e) => onChange(r.source, { detection_method: (e.target.value || null) as MatrixRow["detection_method"] })}>
+              <option value="">—</option>{Object.entries(methods).map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>) : (r.detection_method ? methods[r.detection_method] : "—")}</td>
+          <td className="td text-xs">{fmtDateTime(r.last_checked)}</td>
+          <td className="td">{editable && <input aria-label={`${r.source} manual count`} type="number" min={0} className="input w-20" defaultValue={r.manual_count ?? ""}
+            onBlur={(e) => { const v = e.target.value === "" ? null : Number(e.target.value); if (v !== r.manual_count) onChange(r.source, { manual_count: v }); }} />}</td>
+        </tr>
+        {r.shown && (editable || r.note || r.finding) && <tr><td />
+          <td className="td pt-0" colSpan={7}>{editable
+            ? <input aria-label={`${r.source} note for the email`} className="input w-full text-xs" maxLength={2000} defaultValue={r.note ?? ""} placeholder={r.finding || "Note for the email (optional)"}
+                onBlur={(e) => { if (e.target.value.trim() !== (r.note ?? "")) onChange(r.source, { note: e.target.value }); }} />
+            : <span className="text-xs text-ec-slate">{r.note || r.finding}</span>}</td></tr>}
+      </Fragment>))}
+      {a.matrix.length === 0 && <tr><td className="td text-ec-slate" colSpan={8}>No tools yet. Add the tools you checked for this CVE below, or ask an admin to enable integrations.</td></tr>}
+      </tbody>
+      <tfoot><tr className="border-t-2 border-ec-border"><td className="td font-bold" colSpan={4}>Total unique affected assets<InfoTip k="affected_assets" /> <span className="text-xs font-normal text-ec-slate">({shownTotal} tool{shownTotal === 1 ? "" : "s"} in email)</span></td><td className="td text-right font-bold">{a.total_unique_assets}</td><td colSpan={3} /></tr></tfoot>
+    </table></div>
+    {editable && <form onSubmit={add} className="mt-2 flex flex-wrap items-center gap-2 text-sm">
+      <input list="advisory-tool-list" className="input" aria-label="Add a tool" placeholder="Add a tool (e.g. Tanium)" maxLength={64} value={adding} onChange={(e) => setAdding(e.target.value)} />
+      <datalist id="advisory-tool-list">{suggestions.map((t) => <option key={t} value={t} />)}</datalist>
+      <button className="btn-secondary" disabled={!adding.trim()}>Add tool</button>
+    </form>}
+  </>);
+}
 
 function TicketsAndSharing({ id }: { id: string }) {
   const { can } = useAuth();

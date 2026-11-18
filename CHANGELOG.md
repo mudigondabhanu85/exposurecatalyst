@@ -3,6 +3,32 @@
 All notable changes to ExposureCatalyst. The format follows [Keep a Changelog](https://keepachangelog.com/)
 and the project uses [Semantic Versioning](https://semver.org/).
 
+## [Unreleased] — Exposure-analysis advisory emails
+
+Advisories tab only. Migration 0011 adds columns (no data changes); existing advisories keep every tool visible.
+
+### Added
+- **Exposure Analysis** built-in template, modelled on a vulnerability-management team's exposure report:
+  methodology paragraph, per-tool summary (checks available vs instances found, detection method),
+  vulnerability analysis (CVSS, EPSS, type, exploited in the wild, action recommendation, exposed systems),
+  affected products with version ranges, notes, references, risk owner (BISO) and support team actions, and
+  remediation timeframes by asset classification.
+- Per tool in the asset validation matrix: **In email** (choose which tools the email, Excel and totals cover),
+  **Check available**, **Detection method** and a note; **Add tool** for tools checked by hand. Inventory-based
+  findings are described as *potentially* vulnerable.
+- Vulnerability type (from the CVE's CWE) and editable role-based actions on every advisory.
+- References (NVD first, then vendor advisories and patches) in the Critical, High and Informational templates
+  for new installations.
+- Excel: Support group, Asset class, per-asset Remediation due and Detection method columns; **Ownership
+  Summary** sheet (by division, by support group, and both). CSV/XLSX import recognises these columns.
+- Settings `EXCAT_ADVISORY_SLA_DAYS` and `EXCAT_ADVISORY_REMEDIATION_TIMEFRAMES`.
+
+### Changed
+- New advisories list only enabled asset-source integrations, plus any tools in `EXCAT_ADVISORY_SOURCES`, which
+  now defaults to empty (previously six fixed tools).
+- Advisory editor: Message fields save when you leave a field, and the preview refreshes. Each field notes when
+  the selected template doesn't include it, with a one-click switch to Exposure Analysis.
+
 ## [1.4.0] — 2026-11-17 — Docker deployment, Certificates & Domain, run.sh, subscriptions
 
 All additions; existing features, APIs, data and the `make run` / AWS deployments are unchanged. New behaviour

@@ -52,7 +52,7 @@ advisory_id:
   text: Unique EXCAT-YYYY-NNNN reference stamped on each advisory, for tickets and replies.
 validated:
   label: Validated
-  text: '"Yes" only for sources that actually found affected assets; "No" = integrated but nothing found; "Not Integrated" = no connector.'
+  text: '"Yes" only for sources that actually found affected assets; "No" = integrated but nothing found; "Not Integrated" = no connector. Untick "In email" to leave a tool out of the email.'
 affected_assets:
   label: Affected assets
   text: Assets in your environment that integrations report as vulnerable, de-duplicated by hostname, IP and cloud resource ID.

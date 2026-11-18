@@ -78,6 +78,9 @@ class Advisory(Base):
     affected_products: Mapped[str | None] = mapped_column(Text)
     owner_contact: Mapped[str | None] = mapped_column(String(300))
     sla_due_date: Mapped[date | None] = mapped_column(Date)
+    vuln_type: Mapped[str | None] = mapped_column(String(300))  # e.g. "Race condition (CWE-362)"
+    owner_actions: Mapped[str | None] = mapped_column(Text)  # risk owner / BISO actions (one per line)
+    support_actions: Mapped[str | None] = mapped_column(Text)  # support team actions (one per line)
 
     to_addrs: Mapped[list[str]] = mapped_column(JSON, default=list)
     cc_addrs: Mapped[list[str]] = mapped_column(JSON, default=list)
@@ -114,6 +117,10 @@ class AdvisorySourceStatus(Base):
     integrated: Mapped[bool] = mapped_column(Boolean, default=False)  # set by connectors (Phase 3)
     manual_count: Mapped[int | None] = mapped_column(Integer)  # analyst-entered override
     last_checked: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    shown: Mapped[bool] = mapped_column(Boolean, default=True)  # analyst choice: include this tool in the email
+    check_available: Mapped[bool | None] = mapped_column(Boolean)  # does the tool have a check for this CVE?
+    detection_method: Mapped[str | None] = mapped_column(String(32))  # see advisories.service.DETECTION_METHODS
+    note: Mapped[str | None] = mapped_column(Text)
 
     advisory: Mapped[Advisory] = relationship(back_populates="sources")
 
@@ -134,6 +141,9 @@ class AdvisoryAsset(Base):
     environment: Mapped[str | None] = mapped_column(String(64))
     detection_date: Mapped[date | None] = mapped_column(Date)
     source_ref: Mapped[str | None] = mapped_column(String(128))  # plugin / QID / finding ID
+    support_group: Mapped[str | None] = mapped_column(String(200))
+    asset_class: Mapped[str | None] = mapped_column(String(100))  # remediation-timeframe class (settings)
+    detection_method: Mapped[str | None] = mapped_column(String(32))
     is_manual: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 

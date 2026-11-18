@@ -5,4 +5,5 @@
 {{ components.section("Recommended remediation", advisory.remediation) }}
 {{ components.section("Workaround / compensating controls", advisory.workaround) }}
 {{ components.validation_matrix }}
+{{ components.references }}
 <p style="margin:12px 0 0 0;">Please confirm remediation status to <strong>{{ advisory.owner_contact or "Security Operations" }}</strong>, quoting {{ advisory.advisory_id }}.</p>

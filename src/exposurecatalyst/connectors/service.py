@@ -246,17 +246,32 @@ def panel(db: Session, cve_id: str) -> dict[str, Any]:
     }
 
 
+def integrated_tools(db: Session) -> list[tuple[str, str]]:
+    """(matrix label, default detection method) of every enabled asset-source integration, in order."""
+    from exposurecatalyst.advisories.service import default_method
+
+    out: dict[str, str] = {}
+    for i in asset_sources(db):
+        spec = REGISTRY[i.kind].spec
+        out.setdefault(spec.label, default_method(spec.category))
+    return list(out.items())
+
+
 def pull_into_advisory(db: Session, adv: Advisory, settings: Settings, *, force: bool = False) -> list[dict[str, Any]]:
     """Replace the advisory's integration-sourced assets with current findings; mark checked sources."""
+    from exposurecatalyst.advisories.service import default_method
+
     results = check_all(db, adv.cve_id, settings, force=force)
     adv.assets[:] = [a for a in adv.assets if a.is_manual]
     summary = []
     for integ, chk in results:
         label = REGISTRY[integ.kind].spec.label
         st = next((s for s in adv.sources if s.source == label), None)
-        if st is None:
-            st = AdvisorySourceStatus(source=label, integrated=False)
+        if st is None:  # a newly enabled integration joins the matrix; the analyst's hide/show choice is kept
+            st = AdvisorySourceStatus(source=label, integrated=False, shown=True)
             adv.sources.append(st)
+        if st.detection_method is None:
+            st.detection_method = default_method(REGISTRY[integ.kind].spec.category)
         if chk.status == "ok":
             st.integrated, st.last_checked = True, chk.checked_at
             for f in db.scalars(
@@ -276,6 +291,7 @@ def pull_into_advisory(db: Session, adv: Advisory, settings: Settings, *, force:
                         environment=f.environment,
                         detection_date=f.detection_date,
                         source_ref=f.source_ref,
+                        detection_method=st.detection_method,
                     )
                 )
         summary.append(

@@ -19,26 +19,153 @@
 </table>
 {%- endmacro -%}
 
+{%- set P = "margin:0 0 10px 0;" ~ F ~ "font-size:14px;line-height:21px;color:#0B1B33;" -%}
+{%- set NOTE = "margin:0 0 10px 0;" ~ F ~ "font-size:11px;color:#4A5568;" -%}
+
+{%- macro text_block(text) -%}
+{%- set items = bullets(text) -%}
+{%- if items %}
+<ul style="margin:0 0 10px 0;padding:0 0 0 22px;{{ F }}font-size:14px;line-height:21px;color:#0B1B33;">
+{%- for i in items %}<li style="margin:0 0 4px 0;">{{ i }}</li>{% endfor %}
+</ul>
+{%- else %}
+<p style="{{ P }}">{{ text | nl2br }}</p>
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro heading(title) -%}
+<h2 style="{{ H2 }}">{{ title }}</h2>
+{%- endmacro -%}
+
 {%- macro section(title, text) -%}
 {%- if text %}
 <h2 style="{{ H2 }}">{{ title }}</h2>
-<p style="margin:0 0 10px 0;{{ F }}font-size:14px;line-height:21px;color:#0B1B33;">{{ text | nl2br }}</p>
+{{ text_block(text) }}
 {%- endif %}
 {%- endmacro -%}
 
 {%- macro validation_matrix() -%}
 <h2 style="{{ H2 }}">Asset validation matrix</h2>
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:4px 0 6px 0;">
-<tr><th style="{{ TH }}">Source</th><th style="{{ TH }}">Validated</th><th style="{{ TH }}text-align:right;">Affected assets</th><th style="{{ TH }}">Last checked</th></tr>
+{%- if exposure.rows %}
+<tr><th style="{{ TH }}">Source</th><th style="{{ TH }}">Check available</th><th style="{{ TH }}">Validated</th><th style="{{ TH }}text-align:right;">Affected assets</th><th style="{{ TH }}">Last checked</th></tr>
 {%- for r in exposure.rows %}
 <tr>
 <td style="{{ TD }}">{{ r.source }}{% if r.manual %} <span style="font-size:11px;color:#4A5568;">(Manual)</span>{% endif %}</td>
+<td style="{{ TD }}">{{ r.check }}</td>
 <td style="{{ TD }}{% if r.validated == 'Yes' %}font-weight:bold;{% else %}color:#4A5568;{% endif %}">{{ r.validated }}</td>
 <td style="{{ TD }}text-align:right;">{% if r.validated == 'Not Integrated' %}—{% else %}{{ r.asset_count }}{% endif %}</td>
 <td style="{{ TD }}">{{ r.last_checked or "—" }}</td>
 </tr>
 {%- endfor %}
-<tr><td colspan="2" style="{{ TDL }}">Total unique affected assets</td><td style="{{ TD }}text-align:right;font-weight:bold;">{{ exposure.total_unique }}</td><td style="{{ TD }}font-size:11px;color:#4A5568;">De-duplicated by hostname / IP / cloud resource ID{% if exposure.manual_uncounted %}; includes {{ exposure.manual_uncounted }} manually counted{% endif %}</td></tr>
+<tr><td colspan="3" style="{{ TDL }}">Total unique affected assets</td><td style="{{ TD }}text-align:right;font-weight:bold;">{{ exposure.total_unique }}</td><td style="{{ TD }}font-size:11px;color:#4A5568;">De-duplicated by hostname / IP / cloud resource ID{% if exposure.manual_uncounted %}; includes {{ exposure.manual_uncounted }} manually counted{% endif %}</td></tr>
 </table>
-<p style="margin:0 0 10px 0;{{ F }}font-size:11px;color:#4A5568;">"Yes" only where affected assets were identified. Full asset list attached as Excel.</p>
+<p style="{{ NOTE }}">"Check available": the tool has a detection for this CVE. "Validated": "Yes" only where affected assets were identified. Full asset list attached as Excel.</p>
+{%- else %}
+<p style="{{ P }}">No tools were selected for this advisory. Total unique affected assets: <strong>{{ exposure.total_unique }}</strong>.</p>
+{%- endif %}
+{%- endmacro -%}
+
+
+{%- macro methodology() -%}
+{%- if exposure.methodology %}
+<p style="{{ P }}">{{ exposure.methodology | join(" ") }}{% if exposure.potential %} Systems identified through inventory data are <strong>potentially</strong> vulnerable and should be validated during remediation.{% endif %}</p>
+{%- endif %}
+{%- endmacro -%}
+
+{#- Compact per-tool summary: check availability vs vulnerable instances found. -#}
+{%- macro tool_summary() -%}
+{%- if exposure.rows %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:8px 0 12px 0;">
+<tr><th style="{{ TH }}">Tool</th><th style="{{ TH }}">Checks available</th><th style="{{ TH }}text-align:right;">Instances found</th><th style="{{ TH }}">Detection method</th></tr>
+{%- for r in exposure.rows %}
+<tr>
+<td style="{{ TD }}">{{ r.source }}{% if r.manual %} <span style="font-size:11px;color:#4A5568;">(Manual)</span>{% endif %}</td>
+<td style="{{ TD }}">{{ r.check }}</td>
+<td style="{{ TD }}text-align:right;{% if r.asset_count %}font-weight:bold;{% endif %}">{% if r.validated == 'Not Integrated' %}—{% else %}{{ r.asset_count }}{% endif %}</td>
+<td style="{{ TD }}">{{ r.method or "—" }}</td>
+</tr>
+{%- endfor %}
+</table>
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro vulnerability_analysis() -%}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:8px 0 12px 0;">
+<tr><td style="{{ TDL }}">CVE ID</td><td style="{{ TD }}"><strong>{{ advisory.cve_id }}</strong></td></tr>
+<tr><td style="{{ TDL }}">CVSS score</td><td style="{{ TD }}">{{ cve.cvss }}</td></tr>
+<tr><td style="{{ TDL }}">EPSS (exploit probability)</td><td style="{{ TD }}">{{ cve.epss }}</td></tr>
+{%- if advisory.vuln_type %}
+<tr><td style="{{ TDL }}">Type</td><td style="{{ TD }}">{{ advisory.vuln_type }}</td></tr>
+{%- endif %}
+<tr><td style="{{ TDL }}">Exploited in the wild</td><td style="{{ TD }}">{{ cve.exploited }}{% if cve.kev_listed %} · {{ cve.kev }}{% endif %}</td></tr>
+<tr><td style="{{ TDL }}">Public exploit</td><td style="{{ TD }}">{{ cve.exploit }}</td></tr>
+<tr><td style="{{ TDL }}">Action recommendation</td><td style="{{ TD }}"><strong>{{ advisory.severity | title }}</strong></td></tr>
+<tr><td style="{{ TDL }}">Exposed systems</td><td style="{{ TD }}"><strong>{{ exposure.total_unique }}</strong>{% if exposure.potential %} (includes potentially vulnerable systems from inventory data){% endif %}</td></tr>
+<tr><td style="{{ TDL }}">Remediation due (SLA)</td><td style="{{ TD }}"><strong>{{ advisory.sla_due_date or "—" }}</strong></td></tr>
+<tr><td style="{{ TDL }}">Owner / contact</td><td style="{{ TD }}">{{ advisory.owner_contact or "Security Operations" }}</td></tr>
+</table>
+{%- endmacro -%}
+
+{%- macro affected_products_table() -%}
+<h2 style="{{ H2 }}">Affected products</h2>
+{%- if products %}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:4px 0 10px 0;">
+<tr><th style="{{ TH }}">Product</th><th style="{{ TH }}">Affected versions</th></tr>
+{%- for p in products %}
+<tr><td style="{{ TD }}">{{ p.product }}</td><td style="{{ TD }}">{{ p.versions }}</td></tr>
+{%- endfor %}
+</table>
+{%- else %}
+<p style="{{ P }}">{{ advisory.affected_products or "See references" }}</p>
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro source_notes() -%}
+{%- set noted = exposure.rows | selectattr("note") | list -%}
+{%- if noted %}
+<h2 style="{{ H2 }}">Notes</h2>
+<ul style="margin:0 0 10px 0;padding:0 0 0 22px;{{ F }}font-size:14px;line-height:21px;color:#0B1B33;">
+{%- for r in noted %}<li style="margin:0 0 4px 0;"><strong>{{ r.source }}{% if r.method %} ({{ r.method }}){% endif %}:</strong> {{ r.note }}</li>{% endfor %}
+</ul>
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro references_section() -%}
+{%- if references %}
+<h2 style="{{ H2 }}">References</h2>
+<ul style="margin:0 0 10px 0;padding:0 0 0 22px;{{ F }}font-size:13px;line-height:20px;color:#0B1B33;">
+{%- for r in references %}<li style="margin:0 0 3px 0;"><a href="{{ r.url }}" style="color:#0B1B33;">{{ r.label }}</a></li>{% endfor %}
+</ul>
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro remediation_timeframes() -%}
+<h2 style="{{ H2 }}">Remediation timeframes</h2>
+{%- if timeframes %}
+<p style="{{ P }}">Per policy, this {{ advisory.severity | lower }} severity vulnerability must be remediated within the following timelines:</p>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;margin:4px 0 10px 0;">
+<tr><th style="{{ TH }}">Asset classification</th><th style="{{ TH }}">Remediation requirement</th><th style="{{ TH }}">Due by</th></tr>
+{%- for t in timeframes %}
+<tr><td style="{{ TD }}">{{ t.asset_class }}</td><td style="{{ TD }}">{{ t.days }} days</td><td style="{{ TD }}">{{ t.due }}</td></tr>
+{%- endfor %}
+</table>
+{%- else %}
+<p style="{{ P }}">Remediate all affected systems by <strong>{{ advisory.sla_due_date or "the date agreed with Security Operations" }}</strong>.</p>
+{%- endif %}
+{%- endmacro -%}
+
+{%- macro role_actions() -%}
+{%- if advisory.owner_actions or advisory.support_actions %}
+<h2 style="{{ H2 }}">Required actions</h2>
+<p style="{{ P }}">The attached Excel file contains the affected server inventory, support ownership details and summaries by division and support group. Use the Support group column to decide which team performs remediation.</p>
+{%- if advisory.owner_actions %}
+<p style="margin:10px 0 4px 0;{{ F }}font-size:14px;font-weight:bold;color:#0B1B33;">Risk owner (BISO) actions</p>
+{{ text_block(advisory.owner_actions) }}
+{%- endif %}
+{%- if advisory.support_actions %}
+<p style="margin:10px 0 4px 0;{{ F }}font-size:14px;font-weight:bold;color:#0B1B33;">Support team actions</p>
+{{ text_block(advisory.support_actions) }}
+{%- endif %}
+{%- endif %}
 {%- endmacro -%}

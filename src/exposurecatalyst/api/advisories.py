@@ -56,6 +56,7 @@ router = APIRouter(prefix="/api", tags=["advisories"])
 templates_router = APIRouter(prefix="/api", tags=["templates"])
 ANY_ADVISORY = require_any(P.ADVISORY_CREATE, P.ADVISORY_APPROVE, P.ADVISORY_SEND, P.ADVISORY_EXPORT)
 Emails = list[EmailStr]
+DetectionMethod = Literal["vulnerability_check", "software_inventory", "asset_inventory", "manual"]
 
 
 # ---- schemas --------------------------------------------------------------------------------------
@@ -73,6 +74,9 @@ class AssetIn(BaseModel):
     environment: str | None = Field(None, max_length=64)
     detection_date: date | None = None
     source_ref: str | None = Field(None, max_length=128)
+    support_group: str | None = Field(None, max_length=200)
+    asset_class: str | None = Field(None, max_length=100)
+    detection_method: DetectionMethod | None = None
 
 
 class AssetOut(AssetIn):
@@ -88,6 +92,11 @@ class MatrixRowOut(BaseModel):
     last_checked: datetime | None
     manual: bool
     manual_count: int | None
+    shown: bool
+    check_available: bool | None
+    detection_method: str | None
+    note: str | None
+    finding: str
 
 
 class AdvisoryOut(BaseModel):
@@ -108,6 +117,9 @@ class AdvisoryOut(BaseModel):
     affected_products: str | None
     owner_contact: str | None
     sla_due_date: date | None
+    vuln_type: str | None
+    owner_actions: str | None
+    support_actions: str | None
     to_addrs: list[str]
     cc_addrs: list[str]
     bcc_addrs: list[str]
@@ -148,13 +160,16 @@ def _out(db: Session, adv: Advisory) -> AdvisoryOut:
     return AdvisoryOut(
         **{k: getattr(adv, k) for k in ("id", "advisory_id", "cve_id", "status", "subject", "severity", "title",
                                         "summary", "business_impact", "remediation", "workaround", "affected_products",
-                                        "owner_contact", "sla_due_date", "to_addrs", "cc_addrs", "bcc_addrs",
+                                        "owner_contact", "sla_due_date", "vuln_type", "owner_actions",
+                                        "support_actions", "to_addrs", "cc_addrs", "bcc_addrs",
                                         "created_at", "updated_at", "approved_at", "review_comment", "sent_at")},
         template_id=tv.template_id, template_name=tv.template.name, template_version=tv.version,
         created_by=names.get(adv.created_by), approved_by=names.get(adv.approved_by),
         matrix=[MatrixRowOut(source=r.source, validated=r.validated, asset_count=r.asset_count,
-                             last_checked=r.last_checked, manual=r.manual, manual_count=manual.get(r.source))
-                for r in exp.rows],
+                             last_checked=r.last_checked, manual=r.manual, manual_count=manual.get(r.source),
+                             shown=r.shown, check_available=r.check_available, detection_method=r.detection_method,
+                             note=r.note, finding=r.finding)
+                for r in [*exp.rows, *exp.hidden]],
         total_unique_assets=exp.total_unique,
         assets=[AssetOut.model_validate(a) for a in adv.assets],
     )
@@ -216,8 +231,10 @@ def create_advisory(body: CreateIn, request: Request, p: Principal = Depends(req
     cve = _cve(db, cve_id)
     if cve is None:
         raise HTTPException(404, f"{cve_id} is not in CVE Intelligence yet")
-    adv = _workflow(lambda: new_advisory(db, cve, user_id=p.user.id, sources=settings.advisory_source_list,
-                                         template_id=body.template_id))
+    from exposurecatalyst.connectors.service import integrated_tools
+
+    tools = [*integrated_tools(db), *((s, None) for s in settings.advisory_source_list)]
+    adv = _workflow(lambda: new_advisory(db, cve, user_id=p.user.id, sources=tools, template_id=body.template_id))
     adv.subject = render_subject(adv.template_version.subject_template, build_context(adv, cve))
     audit.record(db, "advisory.created", actor=p.user, request=request, target_type="advisory",
                  target_id=adv.advisory_id, details={"cve_id": cve_id})
@@ -241,6 +258,9 @@ class UpdateIn(BaseModel):
     affected_products: str | None = Field(None, max_length=5_000)
     owner_contact: str | None = Field(None, max_length=300)
     sla_due_date: date | None = None
+    vuln_type: str | None = Field(None, max_length=300)
+    owner_actions: str | None = Field(None, max_length=10_000)
+    support_actions: str | None = Field(None, max_length=10_000)
     to_addrs: Emails | None = Field(None, max_length=200)
     cc_addrs: Emails | None = Field(None, max_length=200)
     bcc_addrs: Emails | None = Field(None, max_length=200)
@@ -348,25 +368,57 @@ async def upload_assets(advisory_pk: int, request: Request, file: UploadFile = F
     return {"imported": len(rows), "errors": errors[:50], "advisory": _out(db, adv).model_dump(mode="json")}
 
 
-class SourceCountIn(BaseModel):
+class SourceIn(BaseModel):
+    """Per-tool settings; only the fields sent are changed."""
+
+    model_config = ConfigDict(extra="forbid")
     manual_count: int | None = Field(None, ge=0, le=1_000_000)
+    shown: bool | None = None
+    check_available: bool | None = None
+    detection_method: DetectionMethod | None = None
+    note: str | None = Field(None, max_length=2_000)
 
 
 @router.put("/advisories/{advisory_pk}/sources/{source}", response_model=AdvisoryOut)
-def set_source_count(advisory_pk: int, source: str, body: SourceCountIn,
-                     p: Principal = Depends(require(P.ADVISORY_CREATE)), db: Session = Depends(get_db)) -> AdvisoryOut:
+def set_source(advisory_pk: int, source: str, body: SourceIn, request: Request,
+               p: Principal = Depends(require(P.ADVISORY_CREATE)), db: Session = Depends(get_db)) -> AdvisoryOut:
     adv = _get(db, advisory_pk)
     _workflow(lambda: require_status(adv, DRAFT))
-    if len(source) > 64:
-        raise HTTPException(422, "Source name too long")
+    source = clean_header(source, 64)
+    if not source:
+        raise HTTPException(422, "Source name required")
+    data = body.model_dump(exclude_unset=True)
+    if data.get("shown") is None:
+        data.pop("shown", None)  # visibility is a yes/no choice
     st = next((s for s in adv.sources if s.source == source), None)
     if st is None:
-        st = AdvisorySourceStatus(source=source, integrated=False)
+        st = AdvisorySourceStatus(source=source, integrated=False, shown=True)
         adv.sources.append(st)
-    st.manual_count = body.manual_count
-    st.last_checked = utcnow() if body.manual_count is not None else None
+    if "manual_count" in data:
+        st.last_checked = utcnow() if data["manual_count"] is not None else None
+    if "note" in data:
+        data["note"] = (data["note"] or "").strip() or None
+    for k, v in data.items():
+        setattr(st, k, v)
+    if "shown" in data:
+        audit.record(db, "advisory.source_shown" if data["shown"] else "advisory.source_hidden", actor=p.user,
+                     request=request, target_type="advisory", target_id=adv.advisory_id, details={"source": source})
     db.commit()
     return _out(db, adv)
+
+
+@router.get("/advisory-sources")
+def advisory_sources(_: Principal = Depends(ANY_ADVISORY), db: Session = Depends(get_db),
+                     settings: Settings = Depends(settings_dep)) -> dict:
+    """Tools an analyst can add to an advisory: enabled integrations first, then every catalog tool."""
+    from exposurecatalyst.advisories.service import DETECTION_METHODS
+    from exposurecatalyst.connectors.base import REGISTRY
+    from exposurecatalyst.connectors.service import integrated_tools
+
+    integrated = [name for name, _ in integrated_tools(db)]
+    catalog = sorted({c.spec.label for c in REGISTRY.values() if "assets_for_cve" in c.spec.capabilities}
+                     | set(settings.advisory_source_list))
+    return {"integrated": integrated, "catalog": catalog, "detection_methods": DETECTION_METHODS}
 
 
 # ---- workflow ---------------------------------------------------------------------------------------

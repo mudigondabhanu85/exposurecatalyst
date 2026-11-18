@@ -237,13 +237,32 @@ def test_failure_isolated_and_not_marked_integrated(admin, configured, cve, logi
     assert m["Wiz"]["validated"] == "Yes"
     assert m["Tanium"]["validated"] == "Not Integrated"  # failed check is not reported as "No"
     assert m["Zafran"]["validated"] == "Yes" and m["Zafran"]["manual"]  # manual rows survive a pull
-    assert m["ArmorCode"]["validated"] == "Not Integrated"
+    assert "ArmorCode" not in m  # neither integrated nor configured → not listed (and not in the email)
     assert r["advisory"]["total_unique_assets"] == 5
     integ_assets = [x for x in r["advisory"]["assets"] if not x["is_manual"]]
     assert {x["source"] for x in integ_assets} == {"Qualys", "Wiz", "ServiceNow CMDB"}
     # pulling again replaces (not duplicates) integration rows
     r2 = analyst.post(f"/api/advisories/{a['id']}/assets/pull", json={"force": True}).json()
     assert len(r2["advisory"]["assets"]) == len(r["advisory"]["assets"])
+
+
+def test_new_advisory_lists_only_integrated_tools(admin, configured, cve, login):
+    analyst = login("Security Analyst", username="ana5")
+    a = analyst.post("/api/advisories", json={"cve_id": CVE}).json()
+    names = [r["source"] for r in a["matrix"]]
+    assert set(names) == {"Qualys", "Wiz", "Tanium", "ServiceNow CMDB"} and all(r["shown"] for r in a["matrix"])
+    m = {r["source"]: r for r in a["matrix"]}
+    assert m["Qualys"]["detection_method"] == "vulnerability_check"
+    tools = analyst.get("/api/advisory-sources").json()
+    assert set(tools["integrated"]) == set(names) and "ArmorCode" in tools["catalog"]
+    # hiding a tool survives a pull and removes its assets from the totals
+    analyst.put(f"/api/advisories/{a['id']}/sources/Wiz", json={"shown": False})
+    r = analyst.post(f"/api/advisories/{a['id']}/assets/pull", json={}).json()["advisory"]
+    m = {row["source"]: row for row in r["matrix"]}
+    assert m["Wiz"]["shown"] is False and m["Qualys"]["shown"] is True
+    assert m["Qualys"]["check_available"] is True  # an integration that found assets has a check
+    html = analyst.get(f"/api/advisories/{a['id']}/preview").text
+    assert ">Wiz<" not in html and ">Qualys" in html
 
 
 def test_tanium_zero_findings_is_no(admin, configured, cve, login):
