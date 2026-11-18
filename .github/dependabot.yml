@@ -1,0 +1,8 @@
+# Keeps the SHA-pinned GitHub Actions current (weekly pull requests; the version is kept in the trailing comment).
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: {interval: weekly}
+    groups:
+      actions: {patterns: ["*"]}
